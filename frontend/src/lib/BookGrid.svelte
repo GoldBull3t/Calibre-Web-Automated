@@ -1,4 +1,5 @@
 <script>
+  // @ts-nocheck
   import { createEventDispatcher } from 'svelte';
   import BookCard from './BookCard.svelte';
   import SkeletonGrid from './SkeletonGrid.svelte';

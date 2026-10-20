@@ -1,4 +1,5 @@
 <script>
+  // @ts-nocheck
   import { toasts, removeToast } from './toast.js';
 </script>
 

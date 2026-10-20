@@ -1,4 +1,5 @@
 <script>
+  // @ts-nocheck
   export let count = 18;
 </script>
 

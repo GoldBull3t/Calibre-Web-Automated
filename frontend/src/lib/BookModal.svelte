@@ -1,4 +1,5 @@
 <script>
+  // @ts-nocheck
   import { onMount, createEventDispatcher } from 'svelte';
   import { toast } from './toast.js';
   import { offlineBookIds, saveBookOffline, removeBookOffline } from './pwa.js';

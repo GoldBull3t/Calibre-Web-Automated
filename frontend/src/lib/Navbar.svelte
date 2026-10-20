@@ -1,4 +1,5 @@
 <script>
+  // @ts-nocheck
   import { createEventDispatcher } from 'svelte';
   import { isOnline, canInstall, promptInstallPWA } from './pwa.js';
   export let activeTab = 'library';

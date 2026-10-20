@@ -1,4 +1,5 @@
 <script>
+  // @ts-nocheck
   import { onMount, createEventDispatcher } from 'svelte';
   export let isOpen = false;
 

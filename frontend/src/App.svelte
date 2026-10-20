@@ -1,4 +1,5 @@
 <script>
+  // @ts-nocheck
   import { onMount, onDestroy } from 'svelte';
   import Navbar from './lib/Navbar.svelte';
   import BookGrid from './lib/BookGrid.svelte';

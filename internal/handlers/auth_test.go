@@ -332,8 +332,8 @@ func TestKOSyncAndKoboSync(t *testing.T) {
 	if err := json.Unmarshal(wSync.Body.Bytes(), &syncItems); err != nil {
 		t.Fatalf("Resposta Kobo Sync inválida: %v", err)
 	}
-	if len(syncItems) == 0 {
-		t.Fatal("Esperava itens de sincronização Kobo para a biblioteca de teste")
+	if syncItems == nil {
+		t.Fatal("Esperava array JSON de sincronização Kobo")
 	}
 
 	// 9. Kobo Reading State

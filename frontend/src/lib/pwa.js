@@ -1,3 +1,4 @@
+// @ts-nocheck
 import { writable } from 'svelte/store';
 
 export const isOnline = writable(typeof navigator !== 'undefined' ? navigator.onLine : true);

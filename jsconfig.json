@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "moduleResolution": "bundler",
+    "target": "ESNext",
+    "module": "ESNext",
+    "verbatimModuleSyntax": true,
+    "isolatedModules": true,
+    "resolveJsonModule": true,
+    "sourceMap": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "checkJs": false
+  },
+  "include": [
+    "frontend/src/**/*.d.ts",
+    "frontend/src/**/*.js",
+    "frontend/src/**/*.svelte"
+  ],
+  "exclude": [
+    "node_modules",
+    "cps",
+    "empty_library",
+    "library",
+    "internal/spa/dist"
+  ]
+}

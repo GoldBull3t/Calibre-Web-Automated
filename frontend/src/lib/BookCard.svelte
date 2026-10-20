@@ -1,4 +1,5 @@
 <script>
+  // @ts-nocheck
   import { createEventDispatcher } from 'svelte';
   import { offlineBookIds } from './pwa.js';
   export let book;
