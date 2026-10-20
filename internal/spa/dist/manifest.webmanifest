@@ -1,0 +1,21 @@
+{
+  "name": "Calibre-Web Automated NextGen",
+  "short_name": "CWA NextGen",
+  "description": "Biblioteca e Leitor de eBooks NextGen de Alta Performance",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "any",
+  "background_color": "#09090b",
+  "theme_color": "#6366f1",
+  "categories": ["books", "entertainment", "productivity"],
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
+

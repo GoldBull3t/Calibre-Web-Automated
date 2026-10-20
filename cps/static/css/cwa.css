@@ -1,4 +1,1467 @@
-/* Truncates a books description if if spans more than 8 lines */
+/* ==========================================================================
+   Calibre-Web Automated (CWA) Ultra-Modern 2026 Design System
+   Replaces dated 2015 CaliBlur styles with clean, sleek, state-of-the-art UI
+   ========================================================================== */
+
+:root {
+    --color-primary: #3b82f6 !important;
+    --color-primary-hover: #2563eb !important;
+    --color-secondary: #3b82f6 !important;
+    --color-secondary-hover: #2563eb !important;
+    --lr-accent: #3b82f6 !important;
+    --lr-accent-soft: rgba(59, 130, 246, 0.15) !important;
+    --cwa-bg: #0b0f19;
+    --cwa-surface: rgba(18, 25, 38, 0.75);
+    --cwa-card: #131b2a;
+    --cwa-border: rgba(255, 255, 255, 0.08);
+    --cwa-border-hover: rgba(59, 130, 246, 0.4);
+    --cwa-text-primary: #f8fafc;
+    --cwa-text-muted: #94a3b8;
+    --cwa-blue: #38bdf8;
+    --cwa-indigo: #6366f1;
+}
+
+/* Base Body & Atmosphere */
+body, body.discover, body.blur {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Inter", "Helvetica Neue", Arial, sans-serif !important;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    background: radial-gradient(circle at 10% 10%, rgba(30, 41, 59, 0.5) 0%, transparent 55%),
+                radial-gradient(circle at 90% 90%, rgba(15, 23, 42, 0.7) 0%, transparent 60%),
+                #0b0f19 !important;
+    background-attachment: fixed !important;
+    color: var(--cwa-text-primary) !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    min-height: 100vh !important;
+    height: auto !important;
+}
+
+body:has(> .container-fluid),
+body:has(> div.container-fluid) {
+    overflow: hidden !important;
+    height: 100vh !important;
+}
+
+/* ==========================================================================
+   Top Navigation Bar & Brand
+   ========================================================================== */
+body > div.navbar.navbar-default.navbar-static-top,
+.navbar.navbar-default.navbar-static-top {
+    height: 60px !important;
+    min-height: 60px !important;
+    background: rgba(11, 15, 25, 0.95) !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.08) !important;
+    backdrop-filter: blur(20px) !important;
+    -webkit-backdrop-filter: blur(20px) !important;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.35) !important;
+    padding: 0 20px !important;
+    margin: 0 !important;
+    position: fixed !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    z-index: 1000 !important;
+}
+
+.navbar > .container-fluid {
+    height: 60px !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+.navbar-header {
+    display: flex !important;
+    align-items: center !important;
+    height: 60px !important;
+    float: left !important;
+}
+
+/* Brand Link: Completely Override CaliBlur's 2017 hacks (margin: 60px auto, width: 240px, overflow: hidden) */
+body > div.navbar.navbar-default.navbar-static-top > div > div.navbar-header > a,
+body div.navbar.navbar-default.navbar-static-top div.navbar-header > a,
+body.blur > div.navbar.navbar-default.navbar-static-top > div > div.navbar-header > a,
+.navbar-brand {
+    position: static !important;
+    margin: 0 !important;
+    width: auto !important;
+    max-width: none !important;
+    height: 60px !important;
+    line-height: 60px !important;
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 16px 0 4px !important;
+    overflow: visible !important;
+    text-overflow: clip !important;
+    white-space: nowrap !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+    color: #ffffff !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.2px !important;
+    float: left !important;
+    text-decoration: none !important;
+}
+
+body > div.navbar.navbar-default.navbar-static-top > div > div.navbar-header > a:hover,
+.navbar-brand:hover {
+    color: #38bdf8 !important;
+    text-decoration: none !important;
+}
+
+/* CWA Badge in Navbar Brand */
+.navbar-brand .label-warning,
+.cwa-badge-cwa {
+    background: linear-gradient(135deg, #0284c7, #0369a1) !important;
+    color: #ffffff !important;
+    font-size: 10px !important;
+    font-weight: 700 !important;
+    padding: 2px 7px !important;
+    border-radius: 6px !important;
+    letter-spacing: 0.5px !important;
+    border: 1px solid rgba(56, 189, 248, 0.4) !important;
+    vertical-align: middle !important;
+    display: inline-block !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.3) !important;
+    margin-left: 6px !important;
+}
+
+/* Hide Redundant / Broken CaliBlur Topbar Elements */
+.home-btn,
+.home-btn > a,
+.plexBack,
+.plexBack > a {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    pointer-events: none !important;
+}
+
+/* Remove CaliBlur Pseudo-elements from Search Form */
+body > div.navbar.navbar-default.navbar-static-top > div > form:before,
+body > div.navbar.navbar-default.navbar-static-top > div > form.search-focus > div > span.input-group-btn:before {
+    display: none !important;
+    content: "" !important;
+}
+
+/* Modern Search Bar */
+body > div.navbar.navbar-default.navbar-static-top > div > form,
+body.blur .navbar-form[role="search"],
+.navbar-form[role="search"] {
+    margin: 0 0 0 16px !important;
+    padding: 0 !important;
+    float: left !important;
+    position: relative !important;
+    display: flex !important;
+    align-items: center !important;
+}
+
+body.blur .navbar-form[role="search"] .input-group,
+body > div.navbar.navbar-default.navbar-static-top > div > form > div,
+.navbar-form[role="search"] .input-group {
+    width: 280px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 8px !important;
+    overflow: hidden !important;
+    transition: all 0.2s ease !important;
+    display: flex !important;
+    align-items: center !important;
+    position: relative !important;
+}
+
+body.blur .navbar-form[role="search"] .input-group:focus-within,
+.navbar-form[role="search"] .input-group:focus-within {
+    border-color: #3b82f6 !important;
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25) !important;
+    background: rgba(255, 255, 255, 0.08) !important;
+    width: 320px !important;
+}
+
+body.blur .navbar-form[role="search"] input.form-control,
+#query {
+    width: 100% !important;
+    background: transparent !important;
+    border: none !important;
+    color: #ffffff !important;
+    font-size: 13px !important;
+    box-shadow: none !important;
+    padding: 6px 12px 6px 34px !important;
+    height: 34px !important;
+}
+
+body.blur .navbar-form[role="search"] input.form-control:focus,
+#query:focus {
+    background: transparent !important;
+    color: #ffffff !important;
+}
+
+body.blur .navbar-form[role="search"] input.form-control::placeholder,
+#query::placeholder {
+    color: #64748b !important;
+    font-size: 13px !important;
+}
+
+/* Glass Magnifying Glass inside search input */
+body.blur .navbar-form[role="search"] .input-group:before,
+.navbar-form[role="search"] .input-group:before {
+    content: "" !important;
+    position: absolute !important;
+    left: 10px !important;
+    top: 50% !important;
+    transform: translateY(-50%) !important;
+    width: 14px !important;
+    height: 14px !important;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' fill='none' viewBox='0 0 24 24' stroke='%2394a3b8' stroke-width='2'%3E%3Cpath stroke-linecap='round' stroke-linejoin='round' d='M21 21l-5.197-5.197m0 0A7.5 7.5 0 105.196 5.196a7.5 7.5 0 0010.607 10.607z'/%3E%3C/svg%3E") !important;
+    background-size: contain !important;
+    background-repeat: no-repeat !important;
+    pointer-events: none !important;
+    z-index: 2 !important;
+}
+
+.navbar-form[role="search"] button.btn,
+body > div.navbar.navbar-default.navbar-static-top > div > form > div > span > button {
+    display: none !important;
+}
+
+/* Advanced Search link in Navbar */
+body > div.navbar.navbar-default.navbar-static-top > div > div.navbar-collapse.collapse > ul > li > a[href*=advanced_search],
+body > div.navbar.navbar-default.navbar-static-top > div > div.navbar-collapse.collapse > ul > li > a[href*=advsearch],
+#advanced_search {
+    display: inline-flex !important;
+    align-items: center !important;
+    font-size: 12px !important;
+    color: #64748b !important;
+    padding: 6px 10px !important;
+    margin-left: 4px !important;
+}
+#advanced_search:hover {
+    color: #94a3b8 !important;
+}
+
+/* Right Side Navbar Navigation */
+.navbar-collapse.collapse {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    flex: 1 !important;
+}
+
+#main-nav,
+.navbar-nav.navbar-right {
+    display: flex !important;
+    align-items: center !important;
+    margin-left: auto !important;
+    margin-top: 0 !important;
+    margin-bottom: 0 !important;
+    margin-right: 0 !important;
+    padding: 0 !important;
+    height: 60px !important;
+    gap: 6px !important;
+}
+
+#main-nav > li {
+    float: none !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    height: auto !important;
+    width: auto !important;
+}
+
+/* Neutralize CaliBlur li:before labels ("MANAGE", "CWA Functions") */
+#main-nav > li:before,
+#main-nav > li:after {
+    display: none !important;
+    content: none !important;
+}
+
+/* ==========================================================================
+   Complete Override of CaliBlur's Broken Upload Button Hacks
+   ========================================================================== */
+#form-upload,
+body > div.navbar.navbar-default.navbar-static-top #form-upload,
+#main-nav #form-upload {
+    position: static !important;
+    float: none !important;
+    width: auto !important;
+    height: auto !important;
+    margin: 0 4px 0 0 !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+#form-upload .form-group {
+    margin: 0 !important;
+    padding: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+}
+
+/* Eradicate the hideous CaliBlur 2017 pseudo-elements that create the deformed book+plus badge */
+#form-upload .form-group .btn:before,
+#form-upload .form-group .btn:after,
+#form-upload .form-group:before,
+#form-upload .form-group:after,
+#form-upload:before,
+#form-upload:after,
+#main-nav > li.form-upload:before,
+#main-nav > li.form-upload:after,
+#main-nav > li:first-child:before,
+#main-nav > li:first-child:after {
+    display: none !important;
+    content: none !important;
+    visibility: hidden !important;
+    width: 0 !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    border: none !important;
+    background: transparent !important;
+    box-shadow: none !important;
+}
+
+/* Sleek Modern Upload Button */
+#form-upload .form-group .btn,
+#form-upload .btn,
+#form-upload .btn-file,
+.navbar-nav .btn-file,
+.btn-file {
+    color: #ffffff !important;
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    border: 1px solid rgba(59, 130, 246, 0.5) !important;
+    border-radius: 8px !important;
+    font-weight: 600 !important;
+    font-size: 13px !important;
+    padding: 7px 16px !important;
+    height: 36px !important;
+    line-height: 20px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: 7px !important;
+    box-shadow: 0 2px 10px rgba(37, 99, 235, 0.3) !important;
+    cursor: pointer !important;
+    text-transform: none !important;
+    position: relative !important;
+    overflow: hidden !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    margin: 0 !important;
+    width: auto !important;
+    opacity: 1 !important;
+}
+
+#form-upload .form-group .btn:hover,
+#form-upload .btn:hover,
+#form-upload .btn-file:hover,
+.navbar-nav .btn-file:hover {
+    background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.45) !important;
+    transform: translateY(-1px) !important;
+    color: #ffffff !important;
+}
+
+#form-upload .form-group .btn .glyphicon,
+#form-upload .btn-file .glyphicon {
+    display: inline-block !important;
+    font-family: 'Glyphicons Halflings' !important;
+    font-size: 13px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    color: #ffffff !important;
+    position: static !important;
+    background: transparent !important;
+    line-height: inherit !important;
+    width: auto !important;
+    height: auto !important;
+}
+
+#form-upload .form-group .btn .glyphicon-upload:before,
+#form-upload .btn-file .glyphicon-upload:before {
+    display: inline-block !important;
+    content: "\e027" !important;
+    font-family: 'Glyphicons Halflings' !important;
+    font-size: 13px !important;
+    color: #ffffff !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: auto !important;
+    height: auto !important;
+    line-height: inherit !important;
+    background: transparent !important;
+}
+
+#form-upload input#btn-upload {
+    position: absolute !important;
+    top: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    left: 0 !important;
+    width: 100% !important;
+    height: 100% !important;
+    opacity: 0 !important;
+    cursor: pointer !important;
+    font-size: 100px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+}
+
+/* ==========================================================================
+   Modern Header Action Buttons (Tasks, Admin, Theme, Refresh, Profile)
+   ========================================================================== */
+#main-nav > li > a,
+#top_tasks,
+#top_admin,
+#cwa-switch-theme,
+#refresh-library,
+.profileDrop {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    height: 36px !important;
+    width: auto !important;
+    min-width: 36px !important;
+    padding: 0 12px !important;
+    margin: 0 !important;
+    border-radius: 8px !important;
+    background: rgba(255, 255, 255, 0.05) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    color: #94a3b8 !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    text-decoration: none !important;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+    gap: 7px !important;
+    box-sizing: border-box !important;
+}
+
+#main-nav > li > a:hover,
+#top_tasks:hover,
+#top_admin:hover,
+#cwa-switch-theme:hover,
+#refresh-library:hover,
+.profileDrop:hover,
+.dropdown.open > a.profileDrop {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+    transform: translateY(-1px) !important;
+    box-shadow: 0 3px 10px rgba(0, 0, 0, 0.25) !important;
+}
+
+/* Text Labels for Desktop */
+#main-nav > li > a > span.hidden-sm,
+#top_tasks > span.hidden-sm,
+#top_admin > span.hidden-sm,
+#cwa-switch-theme > span.hidden-sm,
+#refresh-library > span.hidden-sm {
+    display: inline-block !important;
+    font-size: 12.5px !important;
+    font-weight: 500 !important;
+    color: inherit !important;
+    line-height: 1 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+}
+
+@media (max-width: 1100px) {
+    #main-nav > li > a > span.hidden-sm,
+    #top_tasks > span.hidden-sm,
+    #top_admin > span.hidden-sm,
+    #cwa-switch-theme > span.hidden-sm,
+    #refresh-library > span.hidden-sm {
+        display: none !important;
+    }
+    #main-nav > li > a,
+    #top_tasks,
+    #top_admin,
+    #cwa-switch-theme,
+    #refresh-library {
+        padding: 0 !important;
+        width: 36px !important;
+    }
+}
+
+/* Reset Glyphicons so CaliBlur plex-icons pseudo-elements do not mangle them */
+#top_tasks > .glyphicon,
+#top_admin > .glyphicon,
+#cwa-switch-theme > .glyphicon,
+#refresh-library > .glyphicon,
+.profileDrop > .glyphicon {
+    font-family: 'Glyphicons Halflings' !important;
+    font-size: 13px !important;
+    color: inherit !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: static !important;
+    display: inline-block !important;
+    background: transparent !important;
+    line-height: inherit !important;
+    width: auto !important;
+    height: auto !important;
+}
+
+#top_tasks > .glyphicon-tasks:before {
+    content: "\e137" !important;
+    font-family: 'Glyphicons Halflings' !important;
+    font-size: 13px !important;
+}
+
+#top_admin > .glyphicon-dashboard:before {
+    content: "\e141" !important;
+    font-family: 'Glyphicons Halflings' !important;
+    font-size: 13px !important;
+}
+
+#cwa-switch-theme > .glyphicon-sunglasses:before {
+    content: "\e222" !important;
+    font-family: 'Glyphicons Halflings' !important;
+    font-size: 13px !important;
+}
+
+#refresh-library > .glyphicon-refresh:before {
+    content: "\e031" !important;
+    font-family: 'Glyphicons Halflings' !important;
+    font-size: 13px !important;
+}
+
+.profileDrop > .glyphicon-user:before {
+    content: "\e008" !important;
+    font-family: 'Glyphicons Halflings' !important;
+    font-size: 13px !important;
+}
+
+.profileDrop {
+    padding: 0 !important;
+    width: 36px !important;
+}
+
+/* ==========================================================================
+   Base Layout Containers (Seamless Full-Height Integration)
+   ========================================================================== */
+body > .container-fluid,
+body > div.container-fluid {
+    position: fixed !important;
+    top: 60px !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 100vw !important;
+    height: calc(100vh - 60px) !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    overflow: hidden !important;
+}
+
+body > div.container-fluid > div.row-fluid {
+    height: 100% !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    position: relative !important;
+}
+
+/* ==========================================================================
+   Left Sidebar Navigation Drawer (No Horizontal Scrollbars, Flush with Topbar)
+   ========================================================================== */
+body > div.container-fluid > div.row-fluid > div.col-sm-2,
+body.blur .col-sm-2,
+div.col-sm-2 {
+    position: absolute !important;
+    width: 240px !important;
+    max-width: 240px !important;
+    height: 100% !important;
+    left: 0 !important;
+    top: 0 !important;
+    bottom: 0 !important;
+    background: rgba(13, 19, 31, 0.92) !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    border-right: 1px solid rgba(255, 255, 255, 0.07) !important;
+    padding: 16px 8px 30px 8px !important;
+    margin: 0 !important;
+    overflow-x: hidden !important;
+    overflow-y: auto !important;
+    z-index: 100 !important;
+    box-sizing: border-box !important;
+}
+
+/* Custom Sleek Scrollbar for Sidebar */
+body > div.container-fluid > div.row-fluid > div.col-sm-2::-webkit-scrollbar {
+    width: 4px !important;
+}
+body > div.container-fluid > div.row-fluid > div.col-sm-2::-webkit-scrollbar-track {
+    background: transparent !important;
+}
+body > div.container-fluid > div.row-fluid > div.col-sm-2::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-radius: 4px !important;
+}
+body > div.container-fluid > div.row-fluid > div.col-sm-2::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* Sidebar navigation element & list */
+.navigation,
+nav.navigation,
+#scnd-nav {
+    background: transparent !important;
+    border: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+}
+
+.navigation li,
+#scnd-nav > li {
+    width: 100% !important;
+    max-width: 100% !important;
+    min-height: auto !important;
+    overflow: hidden !important;
+    margin: 1px 0 !important;
+    padding: 0 !important;
+    box-sizing: border-box !important;
+}
+
+.navigation .nav-head,
+#scnd-nav > li.nav-head {
+    color: #64748b !important;
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.08em !important;
+    padding: 14px 12px 6px 12px !important;
+    margin: 0 !important;
+    line-height: 1.2 !important;
+    border: none !important;
+    display: block !important;
+    box-sizing: border-box !important;
+}
+
+.navigation .nav-head:first-child,
+#scnd-nav > li.nav-head:first-child {
+    padding-top: 4px !important;
+    margin-top: 0 !important;
+}
+
+#scnd-nav > li > a {
+    display: flex !important;
+    align-items: center !important;
+    gap: 10px !important;
+    padding: 8px 12px !important;
+    margin: 0 !important;
+    border-radius: 8px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: #94a3b8 !important;
+    text-transform: none !important;
+    transition: all 0.15s ease !important;
+    background: transparent !important;
+    border: none !important;
+    line-height: 1.3 !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
+    white-space: nowrap !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    height: auto !important;
+}
+
+#scnd-nav > li > a:hover {
+    color: #ffffff !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    transform: none !important;
+}
+
+#scnd-nav > li.active > a,
+#scnd-nav > li.active:hover > a {
+    background: rgba(59, 130, 246, 0.12) !important;
+    color: #60a5fa !important;
+    font-weight: 600 !important;
+    border-left: 3px solid #3b82f6 !important;
+    border-radius: 0 8px 8px 0 !important;
+}
+
+#scnd-nav > li > a .glyphicon {
+    font-size: 13px !important;
+    width: 16px !important;
+    min-width: 16px !important;
+    text-align: center !important;
+    color: inherit !important;
+    margin: 0 !important;
+}
+
+/* ==========================================================================
+   Main Content Area (Flush with Topbar, Sleek Padding)
+   ========================================================================== */
+body > div.container-fluid > div.row-fluid > div.col-sm-10,
+body.blur .col-sm-10,
+div.col-sm-10 {
+    position: absolute !important;
+    left: 240px !important;
+    top: 0 !important;
+    right: 0 !important;
+    width: calc(100vw - 240px) !important;
+    max-width: calc(100vw - 240px) !important;
+    height: 100% !important;
+    padding: 24px 32px 40px 32px !important;
+    overflow-y: auto !important;
+    overflow-x: hidden !important;
+    box-sizing: border-box !important;
+}
+
+/* Custom Sleek Scrollbar for Main Content */
+body > div.container-fluid > div.row-fluid > div.col-sm-10::-webkit-scrollbar {
+    width: 6px !important;
+}
+body > div.container-fluid > div.row-fluid > div.col-sm-10::-webkit-scrollbar-track {
+    background: transparent !important;
+}
+body > div.container-fluid > div.row-fluid > div.col-sm-10::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-radius: 6px !important;
+}
+body > div.container-fluid > div.row-fluid > div.col-sm-10::-webkit-scrollbar-thumb:hover {
+    background: rgba(255, 255, 255, 0.25) !important;
+}
+
+/* ==========================================================================
+   Shelf Header & Sort Toolbar
+   ========================================================================== */
+.shelf-actions,
+body.blur .shelf-actions {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    padding: 12px 20px !important;
+    margin: 0 0 24px 0 !important;
+    background: rgba(18, 25, 38, 0.6) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 12px !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+}
+
+.shelf-actions h2 {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+    letter-spacing: -0.3px !important;
+    color: #ffffff !important;
+    margin: 0 !important;
+    display: flex !important;
+    align-items: baseline !important;
+    gap: 8px !important;
+}
+
+.shelf-actions h2 span {
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    color: #64748b !important;
+}
+
+.shelf-actions .filterheader {
+    margin: 0 !important;
+    position: static !important;
+}
+
+.shelf-actions .dropdown-toggle {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #cbd5e1 !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    border-radius: 8px !important;
+    padding: 6px 14px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    transition: all 0.15s ease !important;
+}
+
+.shelf-actions .dropdown-toggle:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    border-color: rgba(255, 255, 255, 0.2) !important;
+    color: #ffffff !important;
+}
+
+/* ==========================================================================
+   Buttons (Overriding CaliBlur Mustard/Orange)
+   ========================================================================== */
+body.blur .btn,
+.btn {
+    text-transform: none !important;
+    font-family: inherit !important;
+    border-radius: 8px !important;
+    font-weight: 500 !important;
+    font-size: 13px !important;
+    padding: 7px 16px !important;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1) !important;
+    box-shadow: none !important;
+}
+
+/* Clean Neutral Button (Back buttons, secondary actions) */
+body.blur .btn-default,
+.btn-default {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #e2e8f0 !important;
+}
+
+body.blur .btn-default:hover,
+.btn-default:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+    border-color: rgba(255, 255, 255, 0.24) !important;
+    color: #ffffff !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Primary Action Button (Electric Blue) */
+body.blur .btn-primary,
+.btn-primary {
+    background: linear-gradient(135deg, #3b82f6, #2563eb) !important;
+    border: 1px solid #3b82f6 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 14px rgba(37, 99, 235, 0.35) !important;
+}
+
+body.blur .btn-primary:hover,
+.btn-primary:hover {
+    background: linear-gradient(135deg, #2563eb, #1d4ed8) !important;
+    box-shadow: 0 6px 18px rgba(37, 99, 235, 0.45) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Success Button */
+body.blur .btn-success,
+.btn-success {
+    background: linear-gradient(135deg, #10b981, #059669) !important;
+    border: 1px solid #10b981 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 12px rgba(16, 185, 129, 0.3) !important;
+}
+
+body.blur .btn-success:hover,
+.btn-success:hover {
+    background: linear-gradient(135deg, #059669, #047857) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Danger Button */
+body.blur .btn-danger,
+.btn-danger {
+    background: linear-gradient(135deg, #ef4444, #dc2626) !important;
+    border: 1px solid #ef4444 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3) !important;
+}
+
+body.blur .btn-danger:hover,
+.btn-danger:hover {
+    background: linear-gradient(135deg, #dc2626, #b91c1c) !important;
+    transform: translateY(-1px) !important;
+}
+
+/* Warning Button */
+body.blur .btn-warning,
+.btn-warning {
+    background: linear-gradient(135deg, #f59e0b, #d97706) !important;
+    border: 1px solid #f59e0b !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+/* Info Button */
+body.blur .btn-info,
+.btn-info {
+    background: linear-gradient(135deg, #0ea5e9, #0284c7) !important;
+    border: 1px solid #0ea5e9 !important;
+    color: #ffffff !important;
+    font-weight: 600 !important;
+}
+
+/* ==========================================================================
+   Toolbar & Shelf Actions (Library View)
+   ========================================================================== */
+.shelf-actions {
+    background: rgba(18, 25, 38, 0.65) !important;
+    border: 1px solid rgba(255, 255, 255, 0.07) !important;
+    border-radius: 12px !important;
+    padding: 14px 20px !important;
+    margin-bottom: 24px !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+}
+
+.shelf-actions h2 {
+    font-size: 19px !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    margin: 0 !important;
+    letter-spacing: -0.3px !important;
+}
+
+.shelf-actions .btn-group > .btn.dropdown-toggle {
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #e2e8f0 !important;
+    border-radius: 8px !important;
+    font-size: 12px !important;
+    font-weight: 600 !important;
+    text-transform: none !important;
+    padding: 7px 14px !important;
+}
+
+.shelf-actions .btn-group > .btn.dropdown-toggle:hover {
+    background: rgba(255, 255, 255, 0.12) !important;
+    color: #ffffff !important;
+}
+
+/* Dropdown Menus */
+.dropdown-menu {
+    background: #111827 !important;
+    border: 1px solid rgba(255, 255, 255, 0.1) !important;
+    border-radius: 10px !important;
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.5) !important;
+    padding: 6px !important;
+    min-width: 170px !important;
+}
+
+.dropdown-menu > li > a {
+    color: #cbd5e1 !important;
+    font-size: 13px !important;
+    border-radius: 6px !important;
+    padding: 8px 12px !important;
+    font-weight: 500 !important;
+    transition: background 0.15s, color 0.15s !important;
+}
+
+.dropdown-menu > li > a:hover {
+    background: #1e293b !important;
+    color: #38bdf8 !important;
+}
+
+/* ==========================================================================
+   Book Cards & Micro-interactions
+   ========================================================================== */
+.book {
+    transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1) !important;
+}
+
+.book:hover {
+    transform: translateY(-5px) !important;
+}
+
+.book .cover img {
+    border-radius: 8px !important;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.5) !important;
+    transition: box-shadow 0.25s ease !important;
+}
+
+.book:hover .cover img {
+    box-shadow: 0 14px 28px rgba(0, 0, 0, 0.65) !important;
+}
+
+/* ==========================================================================
+   Modern Empty State Card
+   ========================================================================== */
+.cwa-empty-state {
+    background: linear-gradient(180deg, rgba(20, 28, 44, 0.75) 0%, rgba(13, 19, 31, 0.85) 100%) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 16px !important;
+    padding: 56px 36px !important;
+    text-align: center !important;
+    max-width: 580px !important;
+    margin: 48px auto !important;
+    backdrop-filter: blur(16px) !important;
+    -webkit-backdrop-filter: blur(16px) !important;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4) !important;
+}
+
+.cwa-empty-icon {
+    width: 64px;
+    height: 64px;
+    border-radius: 50%;
+    background: rgba(59, 130, 246, 0.12);
+    border: 1px solid rgba(59, 130, 246, 0.25);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 26px;
+    color: #60a5fa;
+    margin-bottom: 20px;
+}
+
+.cwa-empty-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: #ffffff;
+    margin-top: 0;
+    margin-bottom: 8px;
+    letter-spacing: -0.3px;
+}
+
+.cwa-empty-desc {
+    font-size: 14px;
+    color: #94a3b8;
+    line-height: 1.6;
+    margin-bottom: 24px;
+    max-width: 440px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+.cwa-empty-actions {
+    display: flex;
+    justify-content: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+/* ==========================================================================
+   Modern Dashboard Panels & KPI Cards (Admin, Settings, Stats)
+   ========================================================================== */
+.cwa-container {
+    max-width: 1080px;
+    margin: 76px auto 60px auto !important;
+    padding: 10px 24px 60px 24px !important;
+    min-height: calc(100vh - 140px);
+}
+
+.edit-container,
+body > .container {
+    margin-top: 76px !important;
+    margin-bottom: 60px !important;
+    min-height: calc(100vh - 140px);
+}
+
+.cwa-back-btn {
+    display: inline-flex !important;
+    align-items: center !important;
+    gap: 6px !important;
+    font-size: 13px !important;
+    font-weight: 500 !important;
+    background: rgba(255, 255, 255, 0.06) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    color: #cbd5e1 !important;
+    border-radius: 8px !important;
+    padding: 6px 14px !important;
+    transition: all 0.15s ease !important;
+}
+
+.cwa-back-btn:hover {
+    background: rgba(255, 255, 255, 0.1) !important;
+    color: #ffffff !important;
+    transform: translateX(-2px) !important;
+}
+
+.cwa-entity-card {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    background: rgba(18, 25, 38, 0.75) !important;
+    border: 1px solid rgba(255, 255, 255, 0.08) !important;
+    border-radius: 10px !important;
+    padding: 14px 18px !important;
+    color: #f1f5f9 !important;
+    text-decoration: none !important;
+    transition: all 0.2s ease !important;
+    backdrop-filter: blur(14px) !important;
+    -webkit-backdrop-filter: blur(14px) !important;
+}
+
+.cwa-entity-card:hover {
+    background: rgba(25, 36, 54, 0.85) !important;
+    border-color: rgba(56, 189, 248, 0.35) !important;
+    color: #ffffff !important;
+    transform: translateY(-2px) !important;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.25) !important;
+}
+
+.cwa-entity-name {
+    font-weight: 600 !important;
+    font-size: 13.5px !important;
+    overflow: hidden !important;
+    text-overflow: ellipsis !important;
+    white-space: nowrap !important;
+    max-width: 80% !important;
+}
+
+.cwa-page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 25px;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+
+.cwa-page-title {
+    font-size: 24px;
+    font-weight: 700;
+    color: #ffffff;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    letter-spacing: -0.4px;
+}
+
+.cwa-page-subtitle {
+    font-size: 13px;
+    color: #94a3b8;
+    margin-top: 4px;
+    margin-bottom: 0;
+}
+
+.cwa-panel {
+    background: rgba(18, 25, 38, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 12px;
+    padding: 26px 28px;
+    margin-bottom: 24px;
+    box-shadow: 0 4px 18px rgba(0, 0, 0, 0.3);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+}
+
+.cwa-panel-title {
+    font-size: 14px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.08em;
+    color: #38bdf8;
+    margin-top: 0;
+    margin-bottom: 18px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    display: flex;
+    align-items: center;
+    gap: 9px;
+}
+
+/* Metrics Grid & Cards */
+.cwa-metrics-grid {
+    display: flex !important;
+    gap: 16px !important;
+    flex-wrap: wrap !important;
+    margin-bottom: 24px !important;
+}
+
+.cwa-metric-box {
+    flex: 1 1 0 !important;
+    min-width: 170px !important;
+    background: #0f1624 !important;
+    border: 1px solid rgba(255, 255, 255, 0.07) !important;
+    border-radius: 10px !important;
+    padding: 18px !important;
+    text-align: center !important;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2) !important;
+    transition: all 0.2s ease !important;
+}
+
+.cwa-metric-box:hover {
+    border-color: rgba(56, 189, 248, 0.4) !important;
+    transform: translateY(-2px) !important;
+}
+
+.cwa-metric-label {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.07em !important;
+    color: #64748b !important;
+    margin-bottom: 6px !important;
+}
+
+.cwa-metric-value {
+    font-size: 28px !important;
+    font-weight: 700 !important;
+    color: #ffffff !important;
+    letter-spacing: -0.5px !important;
+}
+
+.cwa-metric-value.cyan { color: #38bdf8 !important; }
+.cwa-metric-value.green { color: #34d399 !important; }
+.cwa-metric-value.amber { color: #fbbf24 !important; }
+
+/* Operation Item Card */
+.cwa-op-card {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: space-between !important;
+    background: #0f1624 !important;
+    border: 1px solid rgba(255, 255, 255, 0.06) !important;
+    border-radius: 10px !important;
+    padding: 15px 18px !important;
+    margin-bottom: 10px !important;
+    color: #f1f5f9 !important;
+    text-decoration: none !important;
+    transition: all 0.2s ease !important;
+}
+
+.cwa-op-card:hover {
+    background: #151e2e !important;
+    border-color: rgba(56, 189, 248, 0.35) !important;
+    color: #ffffff !important;
+    transform: translateX(3px) !important;
+}
+
+.cwa-op-card .op-title {
+    font-weight: 600 !important;
+    font-size: 14px !important;
+    color: #f1f5f9 !important;
+}
+
+.cwa-op-card .op-desc {
+    font-size: 12px !important;
+    color: #8194a7 !important;
+    margin-top: 2px !important;
+}
+
+/* ==========================================================================
+   Modern iOS / Fluent Style Switch Toggles (Bulletproof CaliBlur Override)
+   ========================================================================== */
+.cwa-setting-row {
+    display: flex !important;
+    justify-content: space-between !important;
+    align-items: center !important;
+    padding: 16px 0 !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06) !important;
+    gap: 24px !important;
+}
+
+.cwa-setting-row:last-child {
+    border-bottom: none !important;
+}
+
+.cwa-setting-info {
+    flex: 1 1 auto !important;
+    min-width: 0 !important;
+}
+
+.cwa-setting-title {
+    font-size: 14.5px !important;
+    font-weight: 600 !important;
+    color: #f8fafc !important;
+    margin-bottom: 4px !important;
+    display: flex !important;
+    align-items: center !important;
+    gap: 8px !important;
+}
+
+.cwa-setting-desc {
+    font-size: 12.5px !important;
+    color: #94a3b8 !important;
+    line-height: 1.5 !important;
+}
+
+.cwa-setting-control {
+    flex: 0 0 54px !important;
+    width: 54px !important;
+    display: flex !important;
+    align-items: center !important;
+    justify-content: flex-end !important;
+}
+
+/* Force label to be block/inline-block, completely overriding CaliBlur's "label { display: inline !important; }" */
+label.cwa-switch,
+.cwa-switch,
+body label.cwa-switch,
+body.discover label.cwa-switch {
+    position: relative !important;
+    display: block !important;
+    width: 48px !important;
+    height: 26px !important;
+    min-width: 48px !important;
+    min-height: 26px !important;
+    max-width: 48px !important;
+    max-height: 26px !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    cursor: pointer !important;
+    box-sizing: border-box !important;
+    overflow: visible !important;
+    vertical-align: middle !important;
+}
+
+/* Completely hide native checkbox */
+.cwa-switch input,
+.cwa-switch input[type="checkbox"],
+label.cwa-switch input {
+    position: absolute !important;
+    opacity: 0 !important;
+    width: 0 !important;
+    height: 0 !important;
+    margin: 0 !important;
+    padding: 0 !important;
+    pointer-events: none !important;
+    z-index: -1 !important;
+    border: none !important;
+    outline: none !important;
+}
+
+/* The Switch Track / Pill */
+.cwa-slider,
+label.cwa-switch > .cwa-slider {
+    position: absolute !important;
+    cursor: pointer !important;
+    top: 0 !important;
+    left: 0 !important;
+    right: 0 !important;
+    bottom: 0 !important;
+    width: 48px !important;
+    height: 26px !important;
+    background-color: #1e293b !important;
+    border: 1px solid rgba(255, 255, 255, 0.15) !important;
+    border-radius: 26px !important;
+    transition: background-color 0.25s cubic-bezier(0.4, 0, 0.2, 1), border-color 0.25s ease !important;
+    box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3) !important;
+    box-sizing: border-box !important;
+    display: block !important;
+}
+
+/* The Switch Knob */
+.cwa-slider:before,
+label.cwa-switch > .cwa-slider:before {
+    position: absolute !important;
+    content: "" !important;
+    height: 18px !important;
+    width: 18px !important;
+    left: 3px !important;
+    top: 3px !important;
+    bottom: auto !important;
+    right: auto !important;
+    background-color: #ffffff !important;
+    border-radius: 50% !important;
+    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.4) !important;
+    transition: transform 0.25s cubic-bezier(0.4, 0, 0.2, 1), background-color 0.25s ease !important;
+    display: block !important;
+    box-sizing: border-box !important;
+}
+
+/* Active / Checked State */
+.cwa-switch input:checked + .cwa-slider,
+label.cwa-switch input:checked + .cwa-slider {
+    background: linear-gradient(135deg, #2563eb, #38bdf8) !important;
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.35) !important;
+}
+
+/* Knob Movement on Checked */
+.cwa-switch input:checked + .cwa-slider:before,
+label.cwa-switch input:checked + .cwa-slider:before {
+    transform: translateX(22px) !important;
+    background-color: #ffffff !important;
+}
+
+/* Form inputs & selects */
+.cwa-select,
+.cwa-input {
+    background-color: #0d151e !important;
+    color: #f8fafc !important;
+    border: 1px solid #2d3b4b !important;
+    border-radius: 7px !important;
+    padding: 8px 12px !important;
+    font-size: 13px !important;
+}
+
+.cwa-select:focus,
+.cwa-input:focus {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 3px rgba(56, 189, 248, 0.2) !important;
+}
+
+/* Terminal Console */
+.cwa-terminal {
+    background: #090e15;
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 8px;
+    padding: 16px;
+    font-family: Consolas, "Liberation Mono", Menlo, monospace;
+    font-size: 12px;
+    color: #94a3b8;
+    line-height: 1.6;
+    max-height: 280px;
+    overflow-y: auto;
+    margin-top: 15px;
+}
+
+/* Modern Tables */
+.cwa-table {
+    width: 100%;
+    margin-bottom: 0;
+    color: #cbd5e1;
+    font-size: 13px;
+}
+
+.cwa-table > thead > tr > th {
+    border-bottom: 1px solid rgba(255, 255, 255, 0.09) !important;
+    color: #64748b;
+    font-weight: 700;
+    text-transform: uppercase;
+    font-size: 11px;
+    letter-spacing: 0.06em;
+    padding: 12px 14px;
+}
+
+.cwa-table > tbody > tr > td {
+    border-top: 1px solid rgba(255, 255, 255, 0.04) !important;
+    padding: 12px 14px;
+    vertical-align: middle;
+}
+
+.cwa-table > tbody > tr:hover {
+    background-color: rgba(255, 255, 255, 0.02) !important;
+}
+
+/* Modern Badges */
+.cwa-badge {
+    display: inline-block;
+    padding: 4px 9px;
+    font-size: 11px;
+    font-weight: 600;
+    border-radius: 5px;
+    letter-spacing: 0.3px;
+}
+
+.cwa-badge-info {
+    background-color: rgba(56, 189, 248, 0.14);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.28);
+}
+
+.cwa-badge-warning {
+    background-color: rgba(251, 191, 36, 0.14);
+    color: #fbbf24;
+    border: 1px solid rgba(251, 191, 36, 0.28);
+}
+
+.cwa-badge-success {
+    background-color: rgba(52, 211, 153, 0.14);
+    color: #34d399;
+    border: 1px solid rgba(52, 211, 153, 0.28);
+}
+
+/* Truncates a books description if it spans more than 8 lines */
 dd.meta_description {
     display: -webkit-box;
     -webkit-line-clamp: 15;
@@ -7,9 +1470,9 @@ dd.meta_description {
 }
 
 body.admin h2 {
-    font-size: 28px !important;
+    font-size: 26px !important;
     font-weight: bold !important;
-    margin-bottom: 30px !important;
+    margin-bottom: 25px !important;
 }
 
 /* Fix z-index issues with specific elements that show through modals */
@@ -21,27 +1484,4 @@ body.modal-open #remove-from-shelves + .publishers,
 body.modal-open #remove-from-shelves + .publishing-date,
 body.modal-open #remove-from-shelves + .tags {
     z-index: -1 !important;
-}
-/* Dim and indicate globally disabled metadata providers in modal */
-.provider-disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-}
-.provider-disabled .glyphicon-ok {
-  display: none;
-}
-
-/* Target only specific selectpicker dropdowns (Tags and other form elements) */
-
-/* #include_serie + .btn-group .dropdown-menu,
-#exclude_serie + .btn-group .dropdown-menu,
-#include_shelf + .btn-group .dropdown-menu,
-#exclude_shelf + .btn-group .dropdown-menu,
-#include_language + .btn-group .dropdown-menu,
-#exclude_language + .btn-group .dropdown-menu,
-#include_extension + .btn-group .dropdown-menu,
-#exclude_extension + .btn-group .dropdown-menu, */
-#include_tag + .btn-group .dropdown-menu,
-#exclude_tag + .btn-group .dropdown-menu {
-    max-width: 40vw;
 }

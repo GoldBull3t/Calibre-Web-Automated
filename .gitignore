@@ -205,3 +205,17 @@ CLAUDE.md
 pr-analysis-*
 # Local issue/PR triage export (see .github/triage/)
 .triage/
+
+
+# Calibre-Web Go binary & runtime data
+calibre-web-go
+calibre-web-go.exe
+library/
+ingest/
+plugins/
+go.work
+go.work.sum
+
+# Explicitly allow CWA Go & Svelte frontend paths
+!frontend/src/lib/
+!internal/spa/dist/

@@ -1,0 +1,36 @@
+# Stage 1: Build do executável estático em Go
+FROM golang:1.22-alpine AS builder
+
+WORKDIR /src
+COPY go.mod go.sum ./
+RUN go mod download
+
+COPY . .
+RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /calibre-web-go ./cmd/server/main.go
+
+# Stage 2: Runtime minimalista
+FROM alpine:3.19
+
+RUN apk --no-cache add ca-certificates tzdata wget \
+    && wget -q -O /usr/local/bin/kepubify https://github.com/pgaskin/kepubify/releases/latest/download/kepubify-linux-64bit \
+    && chmod +x /usr/local/bin/kepubify \
+    && apk del wget
+
+WORKDIR /app
+
+COPY --from=builder /calibre-web-go /app/calibre-web-go
+COPY cps/static /app/cps/static
+COPY empty_library /app/empty_library
+
+ENV PORT=8083 \
+    LIBRARY_PATH=/library \
+    INGEST_PATH=/ingest \
+    STATIC_PATH=/app/cps/static \
+    GOMEMLIMIT=35MiB \
+    GOGC=60
+
+VOLUME ["/library", "/ingest"]
+EXPOSE 8083
+
+ENTRYPOINT ["/app/calibre-web-go"]
+
