@@ -7,14 +7,17 @@ COPY frontend/ ./
 RUN npm run build
 
 # Stage 2: Build do executável estático em Go
-FROM golang:alpine AS builder
+FROM golang:1.24-alpine AS builder
 WORKDIR /src
+ENV GOTOOLCHAIN=local
+
 COPY go.mod go.sum ./
-RUN go mod download
+RUN sed -i -E 's/go 1\.[0-9]+/go 1.22/' go.mod && go mod download
 
 COPY . .
+RUN sed -i -E 's/go 1\.[0-9]+/go 1.22/' go.mod
 COPY --from=frontend-builder /build/internal/spa/dist /src/internal/spa/dist
-RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /calibre-web-go ./cmd/server/main.go
+RUN CGO_ENABLED=0 GOOS=linux go build -mod=mod -ldflags="-s -w" -o /calibre-web-go ./cmd/server
 
 # Stage 3: Runtime minimalista
 FROM alpine:3.20
