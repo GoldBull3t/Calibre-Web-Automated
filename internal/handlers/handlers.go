@@ -14,6 +14,7 @@ import (
 	"github.com/crocodilestick/calibre-web-go/internal/mam"
 	"github.com/crocodilestick/calibre-web-go/internal/plugins"
 	"github.com/crocodilestick/calibre-web-go/internal/search"
+	"github.com/crocodilestick/calibre-web-go/internal/sources"
 	"github.com/flosch/pongo2/v6"
 )
 
@@ -56,6 +57,7 @@ type Handler struct {
 	searchIdx      *search.Indexer
 	mamClient      *mam.Client
 	pluginMgr      *plugins.Manager
+	sourcesMgr     *sources.Manager
 	coverCache     *cache.ByteLRUCache
 	gridTpl        *pongo2.Template
 	detailTpl      *pongo2.Template
@@ -99,6 +101,7 @@ func New(db *database.DB, libraryDir, booksDir, staticDir, ingestDir, pluginsDir
 	}
 	h.mamClient = mam.NewClient(os.Getenv("MAM_ID"))
 	h.pluginMgr, _ = plugins.NewManager(pluginsDir)
+	h.sourcesMgr = sources.NewManager(filepath.Join(libraryDir, "book_sources.json"))
 
 	var err error
 	h.gridTpl, err = pongo2.FromString(gridHTML)

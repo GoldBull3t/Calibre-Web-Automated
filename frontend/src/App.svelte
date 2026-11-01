@@ -8,6 +8,7 @@
   import ShelvesView from './lib/ShelvesView.svelte';
   import FTSView from './lib/FTSView.svelte';
   import MAMView from './lib/MAMView.svelte';
+  import SourcesView from './lib/SourcesView.svelte';
   import DuplicatesView from './lib/DuplicatesView.svelte';
   import CWASettingsView from './lib/CWASettingsView.svelte';
   import PluginsView from './lib/PluginsView.svelte';
@@ -16,7 +17,7 @@
   import { toast } from './lib/toast.js';
   import CommandPalette from './lib/CommandPalette.svelte';
 
-  const VALID_TABS = ['library', 'browse', 'shelves', 'fts', 'mam', 'duplicates', 'cwa_settings', 'plugins', 'stats'];
+  const VALID_TABS = ['library', 'browse', 'shelves', 'fts', 'mam', 'sources', 'duplicates', 'cwa_settings', 'plugins', 'stats'];
 
   function getTabFromHash() {
     if (typeof window === 'undefined') return 'library';
@@ -374,6 +375,8 @@
       <FTSView on:selectBook={handleSelectBook} />
     {:else if activeTab === 'mam'}
       <MAMView {mamStatus} />
+    {:else if activeTab === 'sources'}
+      <SourcesView />
     {:else if activeTab === 'duplicates'}
       <DuplicatesView />
     {:else if activeTab === 'cwa_settings'}
