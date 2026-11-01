@@ -1,6 +1,6 @@
 module github.com/crocodilestick/calibre-web-go
 
-go 1.24
+go 1.26.0
 
 require (
 	github.com/flosch/pongo2/v6 v6.1.0
