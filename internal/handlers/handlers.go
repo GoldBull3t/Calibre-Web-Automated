@@ -76,6 +76,7 @@ type Handler struct {
 	cwaConvertTpl  *pongo2.Template
 	cwaFixerTpl    *pongo2.Template
 	cwaBackupTpl   *pongo2.Template
+	cwaSourcesTpl  *pongo2.Template
 }
 
 func New(db *database.DB, libraryDir, booksDir, staticDir, ingestDir, pluginsDir string) (*Handler, error) {
@@ -187,6 +188,11 @@ func New(db *database.DB, libraryDir, booksDir, staticDir, ingestDir, pluginsDir
 	h.cwaBackupTpl, err = pongo2.FromString(cwaBackupHTML)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao compilar cwaBackup template: %w", err)
+	}
+
+	h.cwaSourcesTpl, err = pongo2.FromString(cwaSourcesHTML)
+	if err != nil {
+		return nil, fmt.Errorf("erro ao compilar cwaSources template: %w", err)
 	}
 
 	return h, nil

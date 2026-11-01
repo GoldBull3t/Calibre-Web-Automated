@@ -269,6 +269,7 @@ func main() {
 	mux.HandleFunc("POST /duplicates/execute-resolution", h.ExecuteResolution)
 	mux.HandleFunc("GET /duplicates/status", h.DuplicateStatus)
 	mux.HandleFunc("GET /cwa-settings", h.CWASettings)
+	mux.HandleFunc("GET /cwa-sources", h.CWASources)
 	mux.HandleFunc("GET /cwa-switch-theme", h.CWASwitchTheme)
 	mux.HandleFunc("POST /cwa-switch-theme", h.CWASwitchTheme)
 	mux.HandleFunc("POST /cwa-library-refresh", h.LibraryRefresh)

@@ -264,8 +264,10 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 10px 18px;
-    border-radius: var(--radius-md);
+    padding: 10px 16px;
+    border-radius: 8px;
+    background: rgba(18, 25, 38, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
     flex-wrap: wrap;
     gap: 12px;
   }
@@ -282,25 +284,29 @@
     gap: 4px;
     background: rgba(255, 255, 255, 0.04);
     padding: 3px;
-    border-radius: var(--radius-sm);
+    border-radius: 6px;
   }
 
   .pill-btn {
     background: transparent;
-    border: none;
-    color: var(--text-secondary);
+    border: 1px solid transparent;
+    color: #94a3b8;
     font-size: 12px;
-    padding: 4px 10px;
+    font-weight: 500;
+    padding: 5px 12px;
     border-radius: 4px;
     cursor: pointer;
     transition: all 0.15s ease;
+    font-family: inherit;
   }
   .pill-btn:hover {
-    color: var(--text-primary);
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.06);
   }
   .pill-btn.active {
-    background: var(--accent);
-    color: white;
+    background: rgba(59, 130, 246, 0.15);
+    border-color: rgba(59, 130, 246, 0.4);
+    color: #38bdf8;
     font-weight: 600;
   }
 
@@ -308,18 +314,18 @@
     display: flex;
     align-items: center;
     gap: 6px;
-    background: var(--accent-glow);
-    border: 1px solid var(--accent);
-    color: var(--accent);
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+    color: #38bdf8;
     padding: 2px 10px;
-    border-radius: var(--radius-full);
+    border-radius: 6px;
     font-size: 12px;
     font-weight: 600;
   }
   .clear-filter {
     background: transparent;
     border: none;
-    color: var(--accent);
+    color: #38bdf8;
     cursor: pointer;
     font-size: 11px;
   }
@@ -335,18 +341,19 @@
     align-items: center;
     gap: 8px;
     font-size: 12px;
-    color: var(--text-secondary);
+    color: #94a3b8;
   }
 
   .sort-select {
     background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border-primary);
-    border-radius: var(--radius-sm);
-    color: var(--text-primary);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 6px;
+    color: #f8fafc;
     padding: 5px 10px;
     font-size: 12px;
     outline: none;
     cursor: pointer;
+    font-family: inherit;
   }
 
   .books-grid {

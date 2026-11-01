@@ -708,6 +708,13 @@ const adminHTML = `<!DOCTYPE html>
                 Automated Operations
             </h2>
             <div style="margin-bottom: 30px;">
+                <a href="/cwa-sources" class="cwa-op-card">
+                    <div>
+                        <div class="op-title"><span class="glyphicon glyphicon-cloud-download" style="color: #38bdf8; margin-right: 8px;"></span> Book Sources &amp; Acquisition Hub</div>
+                        <div class="op-desc">Download books directly from Open Library, Gutenberg, Anna's Archive &amp; Z-Library</div>
+                    </div>
+                    <span class="glyphicon glyphicon-chevron-right" style="color: #64748b; font-size: 12px;"></span>
+                </a>
                 <a href="/cwa-settings" class="cwa-op-card">
                     <div>
                         <div class="op-title"><span class="glyphicon glyphicon-cog" style="color: #38bdf8; margin-right: 8px;"></span> CWA Settings</div>

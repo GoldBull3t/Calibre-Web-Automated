@@ -7,6 +7,7 @@ import (
 	"strings"
 
 	"github.com/crocodilestick/calibre-web-go/internal/auth"
+	"github.com/flosch/pongo2/v6"
 )
 
 func jsonErr(w http.ResponseWriter, msg string, code int) {
@@ -120,4 +121,20 @@ func (h *Handler) SourcesDownload(w http.ResponseWriter, r *http.Request) {
 		"message": "Livro descarregado para a pasta de ingestão contínua com sucesso.",
 		"file":    path,
 	})
+}
+
+// CWASources renderiza o Centro de Fontes de Livros nativo com o design CWA 2026.
+func (h *Handler) CWASources(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if u == nil {
+		http.Redirect(w, r, "/login?next=/cwa-sources", http.StatusFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	_ = h.cwaSourcesTpl.ExecuteWriter(pongo2.Context{
+		"title":        "Fontes & Aquisição de Livros (CWA)",
+		"current_user": u,
+		"is_admin":     auth.HasPermission(u, auth.RoleAdmin),
+	}, w)
 }

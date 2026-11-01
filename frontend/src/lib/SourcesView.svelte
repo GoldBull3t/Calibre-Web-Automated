@@ -2,50 +2,51 @@
   // @ts-nocheck
   import { onMount } from 'svelte';
 
-  // Navegação por abas: 'search' | 'settings'
-  let activeTab = 'search';
+  // Sub-abas: 'search' | 'settings'
+  let activeSubTab = 'search';
 
-  // Dados das fontes
   let sources = [];
   let isAdmin = false;
   let loadingSources = true;
 
-  // Estado de pesquisa
+  // Pesquisa
   let query = '';
   let selectedSource = '';
   let selectedFormat = 'all';
   let results = [];
   let errors = {};
-  let isSearching = false;
-  let hasSearched = false;
+  let searching = false;
+  let searched = false;
 
-  // Estado de transferências: id -> 'idle' | 'downloading' | 'success' | 'error'
-  let downloadState = {};
-  let downloadError = {};
+  // Estado de download
+  let downloadingMap = {};
+  let downloadErrorMap = {};
 
-  // Estado de configuração: sourceId -> { values: {}, enabled: bool }
+  // Configuração das fontes
   let configForms = {};
   let isSaving = {};
-  let saveMessage = {};
+  let saveFeedback = {};
   let isTesting = {};
-  let testMessage = {};
-  let showPassword = {};
+  let testFeedback = {};
+  let showSecretMap = {};
 
-  // Mensagem de feedback de topo
-  let notification = null;
-  let notificationTimer = null;
+  // Alerta global do CWA
+  let alertMessage = '';
+  let alertType = 'success';
+  let alertTimer = null;
 
-  function notify(text, type = 'info') {
-    notification = { text, type };
-    if (notificationTimer) clearTimeout(notificationTimer);
-    notificationTimer = setTimeout(() => { notification = null; }, 4000);
+  function showAlert(msg, type = 'success') {
+    alertMessage = msg;
+    alertType = type;
+    if (alertTimer) clearTimeout(alertTimer);
+    alertTimer = setTimeout(() => { alertMessage = ''; }, 4500);
   }
 
   onMount(async () => {
-    await loadSources();
+    await fetchSources();
   });
 
-  async function loadSources() {
+  async function fetchSources() {
     loadingSources = true;
     try {
       const res = await fetch('/api/sources');
@@ -63,26 +64,24 @@
         }
         configForms = forms;
       }
-    } catch (err) {
-      console.error('Erro ao carregar fontes:', err);
-      notify('Não foi possível carregar a lista de fontes.', 'error');
+    } catch (e) {
+      showAlert('Failed to connect to backend sources API.', 'danger');
     } finally {
       loadingSources = false;
     }
   }
 
-  // Deteção de MD5 ou URL direto do Anna's Archive
   $: isDirectMd5 = /^[0-9a-fA-F]{32}$/.test(query.trim()) || /annas-archive[^\/]*\/md5\/([0-9a-fA-F]{32})/i.test(query.trim());
 
-  async function handleSearch() {
+  async function executeSearch() {
     const q = query.trim();
     if (q.length < 2) {
-      notify('Introduza pelo menos 2 caracteres para pesquisar.', 'error');
+      showAlert('Please enter at least 2 characters to search.', 'warning');
       return;
     }
 
-    isSearching = true;
-    hasSearched = true;
+    searching = true;
+    searched = true;
     errors = {};
 
     try {
@@ -94,29 +93,28 @@
       const data = await res.json();
 
       if (!res.ok) {
-        notify(data.error || 'Erro ao efetuar pesquisa.', 'error');
+        showAlert(data.error || 'Search request failed.', 'danger');
         results = [];
         return;
       }
 
       results = data.results || [];
       errors = data.errors || {};
-    } catch (err) {
-      console.error('Erro na pesquisa:', err);
-      notify('Erro de comunicação ao contactar o servidor.', 'error');
+    } catch (e) {
+      showAlert('Network error while querying book sources.', 'danger');
     } finally {
-      isSearching = false;
+      searching = false;
     }
   }
 
-  function handleKeydown(e) {
-    if (e.key === 'Enter') handleSearch();
+  function onKeyDown(e) {
+    if (e.key === 'Enter') executeSearch();
   }
 
-  async function downloadBook(item) {
+  async function triggerDownload(item) {
     const key = `${item.source}:${item.id}`;
-    downloadState = { ...downloadState, [key]: 'downloading' };
-    downloadError = { ...downloadError, [key]: null };
+    downloadingMap = { ...downloadingMap, [key]: 'downloading' };
+    downloadErrorMap = { ...downloadErrorMap, [key]: null };
 
     try {
       const res = await fetch('/api/sources/download', {
@@ -127,24 +125,24 @@
       const data = await res.json();
 
       if (!res.ok) {
-        downloadState = { ...downloadState, [key]: 'error' };
-        downloadError = { ...downloadError, [key]: data.error || 'Falha no download' };
-        notify(data.error || 'Falha ao descarregar livro.', 'error');
+        downloadingMap = { ...downloadingMap, [key]: 'error' };
+        downloadErrorMap = { ...downloadErrorMap, [key]: data.error || 'Download failed' };
+        showAlert(data.error || 'Failed to download book.', 'danger');
         return;
       }
 
-      downloadState = { ...downloadState, [key]: 'success' };
-      notify(`"${item.title}" transferido para a pasta de ingestão.`, 'success');
-    } catch (err) {
-      downloadState = { ...downloadState, [key]: 'error' };
-      downloadError = { ...downloadError, [key]: 'Erro de rede' };
-      notify('Erro de rede ao iniciar download.', 'error');
+      downloadingMap = { ...downloadingMap, [key]: 'done' };
+      showAlert(`✓ "${item.title}" successfully sent to continuous ingest directory!`, 'success');
+    } catch (e) {
+      downloadingMap = { ...downloadingMap, [key]: 'error' };
+      downloadErrorMap = { ...downloadErrorMap, [key]: 'Network error' };
+      showAlert('Network error while requesting download.', 'danger');
     }
   }
 
   async function testConnection(sourceId) {
     isTesting = { ...isTesting, [sourceId]: true };
-    testMessage = { ...testMessage, [sourceId]: null };
+    testFeedback = { ...testFeedback, [sourceId]: null };
 
     const form = configForms[sourceId] || { values: {} };
 
@@ -157,12 +155,12 @@
       const data = await res.json();
 
       if (res.ok) {
-        testMessage = { ...testMessage, [sourceId]: { ok: true, text: data.message || 'Ligação estabelecida com sucesso.' } };
+        testFeedback = { ...testFeedback, [sourceId]: { ok: true, msg: data.message || 'Connection successful!' } };
       } else {
-        testMessage = { ...testMessage, [sourceId]: { ok: false, text: data.error || 'Falha no teste de ligação.' } };
+        testFeedback = { ...testFeedback, [sourceId]: { ok: false, msg: data.error || 'Connection failed.' } };
       }
-    } catch (err) {
-      testMessage = { ...testMessage, [sourceId]: { ok: false, text: 'Erro de comunicação ao testar ligação.' } };
+    } catch (e) {
+      testFeedback = { ...testFeedback, [sourceId]: { ok: false, msg: 'Network error during connection test.' } };
     } finally {
       isTesting = { ...isTesting, [sourceId]: false };
     }
@@ -170,7 +168,7 @@
 
   async function saveConfig(sourceId) {
     isSaving = { ...isSaving, [sourceId]: true };
-    saveMessage = { ...saveMessage, [sourceId]: null };
+    saveFeedback = { ...saveFeedback, [sourceId]: null };
 
     const form = configForms[sourceId] || { values: {}, enabled: true };
 
@@ -183,16 +181,16 @@
       const data = await res.json();
 
       if (res.ok) {
-        saveMessage = { ...saveMessage, [sourceId]: { ok: true, text: 'Configuração guardada com sucesso.' } };
+        saveFeedback = { ...saveFeedback, [sourceId]: { ok: true, msg: 'Configuration saved successfully.' } };
         sources = data.sources || sources;
-        notify(`Configuração de ${sourceName(sourceId)} guardada.`, 'success');
+        showAlert(`Settings for ${sourceName(sourceId)} saved.`, 'success');
       } else {
-        saveMessage = { ...saveMessage, [sourceId]: { ok: false, text: data.error || 'Erro ao guardar configuração.' } };
-        notify(data.error || 'Erro ao guardar configuração.', 'error');
+        saveFeedback = { ...saveFeedback, [sourceId]: { ok: false, msg: data.error || 'Failed to save settings.' } };
+        showAlert(data.error || 'Failed to save settings.', 'danger');
       }
-    } catch (err) {
-      saveMessage = { ...saveMessage, [sourceId]: { ok: false, text: 'Erro de comunicação ao guardar.' } };
-      notify('Erro de rede ao guardar configuração.', 'error');
+    } catch (e) {
+      saveFeedback = { ...saveFeedback, [sourceId]: { ok: false, msg: 'Network communication error.' } };
+      showAlert('Network error while saving.', 'danger');
     } finally {
       isSaving = { ...isSaving, [sourceId]: false };
     }
@@ -203,7 +201,6 @@
     return s ? s.name : id;
   }
 
-  // Filtragem local por formato
   $: filteredResults = results.filter(r => {
     if (selectedFormat === 'all') return true;
     const fmt = (r.format || '').toLowerCase();
@@ -213,249 +210,220 @@
     return true;
   });
 
-  $: configuredCount = sources.filter(s => s.configured && s.enabled).length;
+  $: activeCount = sources.filter(s => s.configured && s.enabled).length;
 </script>
 
-<div class="sources-view">
-  <!-- Notification banner -->
-  {#if notification}
-    <div class="notification-banner" class:success={notification.type === 'success'} class:error={notification.type === 'error'}>
-      <span class="notification-text">{notification.text}</span>
-      <button class="notification-close" on:click={() => { notification = null; }} aria-label="Fechar">✕</button>
+<div class="cwa-container">
+  <!-- CWA Page Header (Identical to /me & /cwa-settings) -->
+  <div class="cwa-page-header">
+    <div>
+      <h1 class="cwa-page-title">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; vertical-align: middle;">
+          <circle cx="12" cy="12" r="10"></circle>
+          <line x1="2" y1="12" x2="22" y2="12"></line>
+          <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path>
+        </svg>
+        Calibre-Web Automated Book Sources
+      </h1>
+      <p class="cwa-page-subtitle">
+        Federated multi-source search and direct automated acquisition from Anna's Archive, Z-Library, Open Library &amp; Project Gutenberg.
+      </p>
+    </div>
+    <div>
+      <span class="cwa-badge cwa-badge-info">CWA Ingestion Engine</span>
+    </div>
+  </div>
+
+  <!-- Global Alert Bar -->
+  {#if alertMessage}
+    <div class="cwa-alert cwa-alert-{alertType}">
+      <span>{alertMessage}</span>
+      <button class="cwa-alert-close" on:click={() => { alertMessage = ''; }}>✕</button>
     </div>
   {/if}
 
-  <!-- Page Header -->
-  <header class="page-header">
-    <div class="page-header-content">
-      <h1 class="page-title">Fontes de Livros</h1>
-      <p class="page-description">Pesquisa federada em catálogos externos com importação direta para a pasta de ingestão.</p>
+  <!-- CWA Metrics Grid (Matching /me pattern) -->
+  <div class="cwa-metrics-grid">
+    <div class="cwa-metric-box">
+      <div class="cwa-metric-label">Active Sources</div>
+      <div class="cwa-metric-value cyan">{activeCount} / {sources.length}</div>
     </div>
+    <div class="cwa-metric-box">
+      <div class="cwa-metric-label">Supported Formats</div>
+      <div class="cwa-metric-value green">EPUB • PDF • MOBI</div>
+    </div>
+    <div class="cwa-metric-box">
+      <div class="cwa-metric-label">Pipeline Target</div>
+      <div class="cwa-metric-value amber">Auto-Ingest Watcher</div>
+    </div>
+  </div>
 
-    <!-- Tab navigation -->
-    <nav class="tabs-nav" aria-label="Abas de fontes">
+  <!-- Main CWA Panel -->
+  <div class="cwa-panel">
+    <!-- Sub-navigation Tabs matching CWA design -->
+    <div class="cwa-subnav">
       <button 
-        class="tab-link" 
-        class:active={activeTab === 'search'} 
-        on:click={() => { activeTab = 'search'; }}>
-        Pesquisar
+        class="cwa-tab-btn" 
+        class:active={activeSubTab === 'search'} 
+        on:click={() => { activeSubTab = 'search'; }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="11" cy="11" r="8"></circle>
+          <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+        </svg>
+        <span>Search &amp; Download</span>
         {#if results.length > 0}
-          <span class="tab-badge">{results.length}</span>
+          <span class="cwa-badge cwa-badge-info" style="margin-left: 6px;">{results.length}</span>
         {/if}
       </button>
 
       <button 
-        class="tab-link" 
-        class:active={activeTab === 'settings'} 
-        on:click={() => { activeTab = 'settings'; }}>
-        Configurações
-        <span class="tab-badge">{configuredCount}/{sources.length} ativas</span>
+        class="cwa-tab-btn" 
+        class:active={activeSubTab === 'settings'} 
+        on:click={() => { activeSubTab = 'settings'; }}>
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+          <circle cx="12" cy="12" r="3"></circle>
+          <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+        </svg>
+        <span>Provider Settings &amp; API Keys</span>
       </button>
-    </nav>
-  </header>
+    </div>
 
-  <!-- ===================================================================== -->
-  <!-- TAB: PESQUISAR                                                         -->
-  <!-- ===================================================================== -->
-  {#if activeTab === 'search'}
-    <section class="search-panel">
-      <!-- Search Form -->
-      <div class="search-form-card">
-        <div class="search-inputs-grid">
-          <div class="form-field query-field">
-            <label for="search-query" class="field-label">Termo de pesquisa ou identificador</label>
-            <div class="input-with-button">
-              <input 
-                id="search-query"
-                type="text" 
-                class="text-input" 
-                placeholder="Título, autor, ISBN ou hash MD5..." 
-                bind:value={query}
-                on:keydown={handleKeydown}
-              />
-              {#if query}
-                <button type="button" class="clear-input-btn" on:click={() => { query = ''; }} aria-label="Limpar texto">✕</button>
-              {/if}
-            </div>
+    <!-- =================================================================== -->
+    <!-- SUB-TAB 1: SEARCH & ACQUISITION                                      -->
+    <!-- =================================================================== -->
+    {#if activeSubTab === 'search'}
+      <div class="cwa-search-section">
+        <!-- Search Controls -->
+        <div class="cwa-search-bar-row">
+          <div class="search-input-wrap">
+            <input 
+              type="text" 
+              class="form-control cwa-input" 
+              placeholder="Search by title, author, ISBN or paste Anna's Archive MD5 hash..." 
+              bind:value={query} 
+              on:keydown={onKeyDown}
+            />
+            {#if query}
+              <button class="clear-btn" on:click={() => { query = ''; }}>✕</button>
+            {/if}
           </div>
 
-          <div class="form-field source-field">
-            <label for="search-source" class="field-label">Fonte</label>
-            <select id="search-source" class="select-input" bind:value={selectedSource}>
-              <option value="">Todas as fontes ativas</option>
+          <div class="search-select-wrap">
+            <select class="form-control cwa-select" bind:value={selectedSource}>
+              <option value="">All Active Sources</option>
               {#each sources as s}
-                <option value={s.id}>{s.name} {!s.configured ? '(Requer chave)' : ''}</option>
+                <option value={s.id}>{s.name} {!s.configured ? '(No API key)' : ''}</option>
               {/each}
             </select>
           </div>
 
-          <div class="form-field format-field">
-            <label for="search-format" class="field-label">Formato</label>
-            <select id="search-format" class="select-input" bind:value={selectedFormat}>
-              <option value="all">Todos os formatos</option>
+          <div class="search-select-wrap" style="max-width: 170px;">
+            <select class="form-control cwa-select" bind:value={selectedFormat}>
+              <option value="all">All Formats</option>
               <option value="epub">EPUB</option>
               <option value="pdf">PDF</option>
               <option value="mobi">MOBI / AZW3</option>
             </select>
           </div>
 
-          <div class="form-actions">
-            <button type="button" class="btn btn-primary search-submit-btn" on:click={handleSearch} disabled={isSearching}>
-              {#if isSearching}
-                <span class="spinner-inline"></span>
-                <span>A pesquisar...</span>
-              {:else}
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2">
-                  <circle cx="11" cy="11" r="8"></circle>
-                  <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
-                </svg>
-                <span>Pesquisar</span>
-              {/if}
-            </button>
-          </div>
+          <button class="btn btn-primary" on:click={executeSearch} disabled={searching} style="height: 38px;">
+            {#if searching}
+              <span>Searching...</span>
+            {:else}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="margin-right: 4px; vertical-align: middle;">
+                <circle cx="11" cy="11" r="8"></circle>
+                <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+              </svg>
+              <span>Search</span>
+            {/if}
+          </button>
         </div>
 
         {#if isDirectMd5}
-          <div class="direct-md5-note">
-            <span class="note-label">Deteção direta:</span> O termo introduzido corresponde a um hash MD5. O download será efetuado diretamente através da API do Anna's Archive sem necessidade de pesquisa textual.
+          <div class="cwa-hint-box" style="margin-top: 12px;">
+            <strong>MD5 Direct Download Detected:</strong> The query matches an MD5 hash. The book will be downloaded directly via Anna's Archive Fast Download API.
           </div>
         {/if}
-      </div>
 
-      <!-- Provider Errors Banner (if any) -->
-      {#if Object.keys(errors).length > 0}
-        <div class="provider-errors-list">
-          {#each Object.entries(errors) as [srcId, errMsg]}
-            <div class="error-item">
-              <span class="error-source">{sourceName(srcId)}:</span>
-              <span class="error-message">{errMsg}</span>
-              {#if isAdmin}
-                <button type="button" class="error-action-link" on:click={() => { activeTab = 'settings'; }}>
-                  Configurar fonte
-                </button>
-              {/if}
-            </div>
-          {/each}
-        </div>
-      {/if}
-
-      <!-- Results Area -->
-      <div class="results-container">
-        {#if isSearching}
-          <!-- Loading State: Structured Skeletons -->
-          <div class="table-card">
-            <table class="data-table">
-              <thead>
-                <tr>
-                  <th style="width: 48px;"></th>
-                  <th>Título e Autor</th>
-                  <th>Fonte</th>
-                  <th>Formato</th>
-                  <th>Ano</th>
-                  <th>Tamanho</th>
-                  <th style="width: 140px; text-align: right;">Ação</th>
-                </tr>
-              </thead>
-              <tbody>
-                {#each [1, 2, 3, 4, 5] as _}
-                  <tr class="skeleton-row">
-                    <td><div class="skeleton skeleton-thumb"></div></td>
-                    <td>
-                      <div class="skeleton skeleton-text" style="width: 65%;"></div>
-                      <div class="skeleton skeleton-text skeleton-sub" style="width: 40%;"></div>
-                    </td>
-                    <td><div class="skeleton skeleton-badge"></div></td>
-                    <td><div class="skeleton skeleton-text" style="width: 40px;"></div></td>
-                    <td><div class="skeleton skeleton-text" style="width: 35px;"></div></td>
-                    <td><div class="skeleton skeleton-text" style="width: 50px;"></div></td>
-                    <td style="text-align: right;"><div class="skeleton skeleton-button" style="margin-left: auto;"></div></td>
-                  </tr>
-                {/each}
-              </tbody>
-            </table>
+        <!-- Error messages if sources failed -->
+        {#if Object.keys(errors).length > 0}
+          <div style="margin-top: 14px;">
+            {#each Object.entries(errors) as [srcId, errMsg]}
+              <div class="cwa-alert cwa-alert-warning" style="margin-bottom: 8px;">
+                <strong>{sourceName(srcId)}:</strong> {errMsg}
+                {#if isAdmin}
+                  <a href="javascript:void(0)" on:click={() => { activeSubTab = 'settings'; }} style="margin-left: 10px; text-decoration: underline; color: inherit;">Configure</a>
+                {/if}
+              </div>
+            {/each}
           </div>
-        {:else if filteredResults.length > 0}
-          <!-- Success State: Structured Data Table -->
-          <div class="table-card">
-            <div class="table-header-info">
-              <span class="results-count">{filteredResults.length} {filteredResults.length === 1 ? 'livro encontrado' : 'livros encontrados'}</span>
+        {/if}
+
+        <!-- Table Results matching CWA Table style -->
+        <div style="margin-top: 24px;">
+          {#if searching}
+            <div style="text-align: center; padding: 40px; color: #94a3b8;">
+              <p>Querying external book providers...</p>
             </div>
-            <table class="data-table">
+          {:else if filteredResults.length > 0}
+            <h2 class="cwa-panel-title" style="margin-bottom: 12px; font-size: 16px;">
+              Search Results ({filteredResults.length})
+            </h2>
+            <table class="table cwa-table">
               <thead>
                 <tr>
-                  <th style="width: 48px;"></th>
-                  <th>Título e Autor</th>
-                  <th>Fonte</th>
-                  <th>Formato</th>
-                  <th>Ano</th>
-                  <th>Tamanho</th>
-                  <th style="width: 140px; text-align: right;">Ação</th>
+                  <th style="width: 44px;">Cover</th>
+                  <th>Title &amp; Author</th>
+                  <th>Source</th>
+                  <th>Format</th>
+                  <th>Year</th>
+                  <th>Size</th>
+                  <th style="text-align: right; width: 140px;">Action</th>
                 </tr>
               </thead>
               <tbody>
                 {#each filteredResults as r (r.source + ':' + r.id)}
                   {@const key = `${r.source}:${r.id}`}
-                  {@const state = downloadState[key]}
+                  {@const state = downloadingMap[key]}
                   <tr>
-                    <td class="col-thumb">
+                    <td style="padding: 8px 12px;">
                       {#if r.cover}
-                        <img src={r.cover} alt="" class="book-thumb" loading="lazy" referrerpolicy="no-referrer" />
+                        <img src={r.cover} alt="" class="cwa-book-thumb" loading="lazy" referrerpolicy="no-referrer" />
                       {:else}
-                        <div class="book-thumb-empty">
-                          <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="1.5">
-                            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
-                            <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path>
-                          </svg>
-                        </div>
+                        <div class="cwa-book-thumb-empty">📖</div>
                       {/if}
                     </td>
-
-                    <td class="col-title">
-                      <div class="book-title" title={r.title}>{r.title}</div>
-                      <div class="book-author">{r.author || 'Autor desconhecido'}</div>
+                    <td>
+                      <div class="cwa-row-title">{r.title}</div>
+                      <div class="cwa-row-author">{r.author || 'Unknown author'}</div>
                     </td>
-
-                    <td class="col-source">
-                      <span class="source-tag">{sourceName(r.source)}</span>
+                    <td>
+                      <span class="cwa-badge cwa-badge-info">{sourceName(r.source)}</span>
                     </td>
-
-                    <td class="col-format">
-                      <span class="format-tag">{(r.format || 'EPUB').toUpperCase()}</span>
+                    <td>
+                      <span class="cwa-tag-format">{(r.format || 'EPUB').toUpperCase()}</span>
                     </td>
-
-                    <td class="col-year">
-                      <span class="tabular-text">{r.year || '—'}</span>
+                    <td>
+                      <span class="cwa-mono-cell">{r.year || '—'}</span>
                     </td>
-
-                    <td class="col-size">
-                      <span class="tabular-text">{r.size || '—'}</span>
+                    <td>
+                      <span class="cwa-mono-cell">{r.size || '—'}</span>
                     </td>
-
-                    <td class="col-action" style="text-align: right;">
+                    <td style="text-align: right;">
                       <button 
-                        type="button"
-                        class="btn btn-secondary btn-download" 
-                        class:btn-success={state === 'success'}
-                        class:btn-error={state === 'error'}
-                        on:click={() => downloadBook(r)}
-                        disabled={state === 'downloading' || state === 'success'}>
+                        class="btn btn-primary btn-sm"
+                        class:btn-success={state === 'done'}
+                        class:btn-danger={state === 'error'}
+                        on:click={() => triggerDownload(r)}
+                        disabled={state === 'downloading' || state === 'done'}>
                         {#if state === 'downloading'}
-                          <span class="spinner-inline"></span>
-                          <span>A transferir...</span>
-                        {:else if state === 'success'}
-                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2.5">
-                            <polyline points="20 6 9 17 4 12"></polyline>
-                          </svg>
-                          <span>Importado</span>
+                          <span>Downloading...</span>
+                        {:else if state === 'done'}
+                          <span>✓ Ingested</span>
                         {:else if state === 'error'}
-                          <span>Tentar de novo</span>
+                          <span>Retry</span>
                         {:else}
-                          <svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2">
-                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                            <polyline points="7 10 12 15 17 10"></polyline>
-                            <line x1="12" y1="15" x2="12" y2="3"></line>
-                          </svg>
-                          <span>Descarregar</span>
+                          <span>1-Click Ingest</span>
                         {/if}
                       </button>
                     </td>
@@ -463,877 +431,588 @@
                 {/each}
               </tbody>
             </table>
-          </div>
-        {:else if hasSearched}
-          <!-- Empty State after search -->
-          <div class="state-box">
-            <h3 class="state-title">Nenhum livro encontrado</h3>
-            <p class="state-desc">Não foram encontrados resultados para "{query}". Tente ajustar os termos de pesquisa ou remover os filtros de formato.</p>
-          </div>
-        {:else}
-          <!-- Initial Empty State -->
-          <div class="state-box">
-            <h3 class="state-title">Pesquisa federada de livros</h3>
-            <p class="state-desc">Escreva o título, autor ou assunto no campo acima para pesquisar simultaneamente nas fontes ativas. Os livros descarregados são colocados na pasta de ingestão contínua do Calibre-Web.</p>
+          {:else if searched}
+            <div style="text-align: center; padding: 48px 20px; color: #94a3b8;">
+              <p style="font-size: 15px; color: #ffffff; margin-bottom: 6px;">No books found</p>
+              <p>No results matched "{query}". Try adjusting keywords or check provider configurations.</p>
+            </div>
+          {:else}
+            <!-- Empty initial state with CWA Operation Cards -->
+            <div style="padding: 10px 0;">
+              <p style="color: #94a3b8; font-size: 13.5px; margin-bottom: 16px;">
+                Enter a title or author above to search across active digital libraries. Selected books are transferred directly into the CWA auto-ingestion folder.
+              </p>
+              
+              <div class="cwa-quick-providers-overview">
+                {#each sources as s}
+                  <div class="cwa-op-card" style="margin-bottom: 10px; cursor: pointer;" on:click={() => { selectedSource = s.id; }}>
+                    <div>
+                      <div class="op-title">
+                        <span class="glyphicon glyphicon-book" style="color: #38bdf8; margin-right: 8px;"></span>
+                        {s.name}
+                      </div>
+                      <div class="op-desc">{s.description}</div>
+                    </div>
+                    <span class="cwa-badge {s.enabled && s.configured ? 'cwa-badge-info' : 'cwa-badge-warning'}">
+                      {s.enabled && s.configured ? 'Active' : 'Setup Required'}
+                    </span>
+                  </div>
+                {/each}
+              </div>
+            </div>
+          {/if}
+        </div>
+      </div>
+    {/if}
+
+    <!-- =================================================================== -->
+    <!-- SUB-TAB 2: PROVIDER SETTINGS & API KEYS                             -->
+    <!-- =================================================================== -->
+    {#if activeSubTab === 'settings'}
+      <div class="cwa-settings-section">
+        <h2 class="cwa-panel-title">
+          <span class="glyphicon glyphicon-cog"></span>
+          Book Provider Credentials &amp; Services
+        </h2>
+
+        {#if !isAdmin}
+          <div class="cwa-alert cwa-alert-warning">
+            Administrator permissions are required to modify provider settings and keys.
           </div>
         {/if}
-      </div>
-    </section>
-  {/if}
 
-  <!-- ===================================================================== -->
-  <!-- TAB: CONFIGURAÇÕES DE FONTES                                           -->
-  <!-- ===================================================================== -->
-  {#if activeTab === 'settings'}
-    <section class="settings-panel">
-      {#if !isAdmin}
-        <div class="notice-callout">
-          <span class="notice-icon">ℹ</span>
-          <span>Apenas utilizadores com perfil de Administrador podem alterar as configurações e credenciais das fontes.</span>
-        </div>
-      {/if}
+        <div class="cwa-providers-config-list">
+          {#each sources as s}
+            {@const form = configForms[s.id] || { values: {}, enabled: true }}
+            {@const test = testFeedback[s.id]}
+            {@const save = saveFeedback[s.id]}
+            {@const testing = isTesting[s.id]}
+            {@const saving = isSaving[s.id]}
 
-      <div class="providers-list">
-        {#each sources as s}
-          {@const form = configForms[s.id] || { values: {}, enabled: true }}
-          {@const test = testMessage[s.id]}
-          {@const save = saveMessage[s.id]}
-          {@const testing = isTesting[s.id]}
-          {@const saving = isSaving[s.id]}
+            <div class="cwa-setting-row" style="flex-direction: column; align-items: stretch; gap: 14px; margin-bottom: 20px; padding-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.06);">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start;">
+                <div class="cwa-setting-info">
+                  <div class="cwa-setting-title">
+                    <span class="glyphicon glyphicon-cloud" style="color: #38bdf8; margin-right: 6px;"></span>
+                    {s.name}
+                    <span class="cwa-badge {s.enabled && s.configured ? 'cwa-badge-info' : 'cwa-badge-warning'}" style="margin-left: 8px;">
+                      {s.enabled && s.configured ? 'Active' : s.configured ? 'Disabled' : 'Requires API Key'}
+                    </span>
+                  </div>
+                  <div class="cwa-setting-desc">{s.description}</div>
+                </div>
 
-          <article class="provider-card">
-            <!-- Header do Provedor -->
-            <div class="provider-card-header">
-              <div class="provider-title-area">
-                <h3 class="provider-name">{s.name}</h3>
-                <span class="status-badge" class:status-active={s.enabled && s.configured} class:status-inactive={!s.enabled && s.configured} class:status-unconfigured={!s.configured}>
-                  {s.enabled && s.configured ? 'Ativo' : s.configured ? 'Desativado' : 'Requer configuração'}
-                </span>
+                {#if isAdmin}
+                  <div class="cwa-setting-control">
+                    <label class="cwa-switch" for="switch-{s.id}">
+                      <input 
+                        id="switch-{s.id}" 
+                        type="checkbox" 
+                        bind:checked={form.enabled} 
+                        on:change={() => saveConfig(s.id)} 
+                      />
+                      <span class="cwa-slider"></span>
+                    </label>
+                  </div>
+                {/if}
               </div>
 
-              {#if isAdmin}
-                <div class="provider-toggle">
-                  <label class="toggle-switch" for="toggle-{s.id}">
-                    <input 
-                      id="toggle-{s.id}"
-                      type="checkbox" 
-                      bind:checked={form.enabled} 
-                      on:change={() => saveConfig(s.id)}
-                    />
-                    <span class="toggle-slider"></span>
-                  </label>
-                  <span class="toggle-label">{form.enabled ? 'Ativado' : 'Desativado'}</span>
+              {#if s.fields && s.fields.length > 0}
+                <div class="cwa-fields-group">
+                  {#each s.fields as f}
+                    <div class="cwa-field-row">
+                      <div style="display: flex; justify-content: space-between; margin-bottom: 4px;">
+                        <label for="input-{s.id}-{f.key}" style="font-size: 12px; font-weight: 600; color: #cbd5e1;">
+                          {f.label}
+                        </label>
+                        {#if f.secret}
+                          <a href="javascript:void(0)" on:click={() => { showSecretMap[s.id + '_' + f.key] = !showSecretMap[s.id + '_' + f.key]; }} style="font-size: 11px; color: #38bdf8;">
+                            {showSecretMap[s.id + '_' + f.key] ? 'Hide' : 'Show'}
+                          </a>
+                        {/if}
+                      </div>
+
+                      <input 
+                        id="input-{s.id}-{f.key}"
+                        type={f.secret && !showSecretMap[s.id + '_' + f.key] ? 'password' : 'text'}
+                        class="form-control cwa-input"
+                        placeholder={f.default || ''}
+                        bind:value={form.values[f.key]}
+                        disabled={!isAdmin || saving}
+                      />
+                    </div>
+                  {/each}
+
+                  {#if s.id === 'annas'}
+                    <div class="cwa-hint-box">
+                      <strong>Recommended Mirrors:</strong>
+                      <div style="display: flex; gap: 6px; margin-top: 4px;">
+                        {#each ['https://annas-archive.li', 'https://annas-archive.se', 'https://annas-archive.org'] as mirror}
+                          <button class="btn btn-default btn-xs" type="button" on:click={() => { form.values.base_url = mirror; configForms = { ...configForms }; }}>
+                            {mirror.replace('https://', '')}
+                          </button>
+                        {/each}
+                      </div>
+                    </div>
+                  {/if}
+
+                  {#if s.id === 'zlibrary'}
+                    <div class="cwa-hint-box">
+                      <strong>Z-Library Credentials:</strong> Log in to your personal domain, press F12 &gt; Application/Storage &gt; Cookies, and copy the <code>remix_userid</code> and <code>remix_userkey</code> values.
+                    </div>
+                  {/if}
+
+                  {#if test}
+                    <div class="cwa-alert {test.ok ? 'cwa-alert-success' : 'cwa-alert-warning'}" style="margin: 8px 0;">
+                      {test.msg}
+                    </div>
+                  {/if}
+
+                  {#if save}
+                    <div class="cwa-alert {save.ok ? 'cwa-alert-success' : 'cwa-alert-warning'}" style="margin: 8px 0;">
+                      {save.msg}
+                    </div>
+                  {/if}
+
+                  {#if isAdmin}
+                    <div style="display: flex; gap: 10px; margin-top: 10px;">
+                      <button class="btn btn-default" type="button" on:click={() => testConnection(s.id)} disabled={testing || saving}>
+                        {testing ? 'Testing connection...' : 'Test Connection'}
+                      </button>
+                      <button class="btn btn-primary" type="button" on:click={() => saveConfig(s.id)} disabled={saving}>
+                        {saving ? 'Saving...' : 'Save Settings'}
+                      </button>
+                    </div>
+                  {/if}
+                </div>
+              {:else}
+                <div style="font-size: 13px; color: #94a3b8; padding-top: 6px;">
+                  This is a public service. No API keys or credentials are required.
                 </div>
               {/if}
             </div>
-
-            <p class="provider-description">{s.description}</p>
-
-            <!-- Campos do formulário se existirem -->
-            {#if s.fields && s.fields.length > 0}
-              <div class="provider-fields-form">
-                {#each s.fields as f}
-                  <div class="form-group">
-                    <div class="field-header">
-                      <label for="field-{s.id}-{f.key}" class="field-label">
-                        {f.label}
-                        {#if !f.optional}<span class="required-indicator">*</span>{/if}
-                      </label>
-                      {#if f.secret}
-                        <button 
-                          type="button" 
-                          class="link-button" 
-                          on:click={() => { showPassword[s.id + '_' + f.key] = !showPassword[s.id + '_' + f.key]; }}>
-                          {showPassword[s.id + '_' + f.key] ? 'Ocultar' : 'Mostrar'}
-                        </button>
-                      {/if}
-                    </div>
-
-                    <input 
-                      id="field-{s.id}-{f.key}"
-                      type={f.secret && !showPassword[s.id + '_' + f.key] ? 'password' : 'text'}
-                      class="text-input" 
-                      placeholder={f.default || ''}
-                      bind:value={form.values[f.key]}
-                      disabled={!isAdmin || saving}
-                    />
-                  </div>
-                {/each}
-
-                {#if s.id === 'annas'}
-                  <div class="helper-text-block">
-                    <span class="helper-label">Mirrors conhecidos:</span>
-                    <div class="quick-links">
-                      {#each ['https://annas-archive.li', 'https://annas-archive.se', 'https://annas-archive.org'] as mirror}
-                        <button 
-                          type="button" 
-                          class="link-pill" 
-                          on:click={() => { form.values.base_url = mirror; configForms = { ...configForms }; }}>
-                          {mirror}
-                        </button>
-                      {/each}
-                    </div>
-                  </div>
-                {/if}
-
-                {#if s.id === 'zlibrary'}
-                  <div class="helper-text-block">
-                    Para utilizar a Z-Library, inicie sessão no seu domínio pessoal, abra as ferramentas de programador do navegador (F12) e consulte os cookies <code>remix_userid</code> e <code>remix_userkey</code>.
-                  </div>
-                {/if}
-
-                <!-- Feedback Inline -->
-                {#if test}
-                  <div class="inline-feedback" class:feedback-success={test.ok} class:feedback-error={!test.ok}>
-                    {test.text}
-                  </div>
-                {/if}
-
-                {#if save}
-                  <div class="inline-feedback" class:feedback-success={save.ok} class:feedback-error={!save.ok}>
-                    {save.text}
-                  </div>
-                {/if}
-
-                <!-- Ações do Provedor -->
-                {#if isAdmin}
-                  <div class="provider-actions">
-                    <button 
-                      type="button" 
-                      class="btn btn-secondary" 
-                      on:click={() => testConnection(s.id)} 
-                      disabled={testing || saving}>
-                      {#if testing}
-                        <span class="spinner-inline"></span>
-                        <span>A testar ligação...</span>
-                      {:else}
-                        <span>Testar ligação</span>
-                      {/if}
-                    </button>
-
-                    <button 
-                      type="button" 
-                      class="btn btn-primary" 
-                      on:click={() => saveConfig(s.id)} 
-                      disabled={saving}>
-                      {#if saving}
-                        <span class="spinner-inline"></span>
-                        <span>A guardar...</span>
-                      {:else}
-                        <span>Guardar</span>
-                      {/if}
-                    </button>
-                  </div>
-                {/if}
-              </div>
-            {:else}
-              <div class="free-source-notice">
-                Esta fonte está disponível publicamente e não requer chaves de autenticação ou configuração adicional.
-              </div>
-            {/if}
-          </article>
-        {/each}
+          {/each}
+        </div>
       </div>
-    </section>
-  {/if}
+    {/if}
+  </div>
 </div>
 
 <style>
   /* ========================================================================= */
-  /* DESIGN SYSTEM: SHADCN / RADIX / ZINC NEUTRAL CLEAN                       */
+  /* CALIBRE-WEB AUTOMATED (CWA) 2026 DESIGN SYSTEM                            */
+  /* Fully unified with /me, /admin, /cwa-settings & /cwa-stats                */
   /* ========================================================================= */
-  .sources-view {
-    max-width: 1280px;
+  .cwa-container {
+    max-width: 1200px;
     margin: 0 auto;
     padding: 24px 20px 80px;
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
   }
 
-  /* Page Header */
-  .page-header {
+  /* Page Header matching /me */
+  .cwa-page-header {
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 24px;
+    flex-wrap: wrap;
     gap: 16px;
-    border-bottom: 1px solid var(--border-primary);
-    padding-bottom: 16px;
   }
 
-  .page-header-content {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
+  .cwa-page-title {
+    font-size: 22px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: #ffffff;
+    margin: 0 0 4px;
   }
 
-  .page-title {
-    font-size: 24px;
-    font-weight: 600;
-    letter-spacing: -0.02em;
-    color: var(--text-primary);
+  .cwa-page-subtitle {
+    font-size: 13px;
+    color: #94a3b8;
     margin: 0;
-  }
-
-  .page-description {
-    font-size: 14px;
-    color: var(--text-secondary);
-    margin: 0;
+    max-width: 720px;
     line-height: 1.5;
   }
 
-  /* Tabs Navigation */
-  .tabs-nav {
-    display: flex;
-    gap: 8px;
-    border-bottom: 1px solid transparent;
+  /* Badges */
+  .cwa-badge {
+    font-size: 11px;
+    font-weight: 700;
+    padding: 3px 8px;
+    border-radius: 6px;
+    letter-spacing: 0.4px;
+    text-transform: uppercase;
   }
 
-  .tab-link {
+  .cwa-badge-info {
+    background: rgba(56, 189, 248, 0.15);
+    color: #38bdf8;
+    border: 1px solid rgba(56, 189, 248, 0.3);
+  }
+
+  .cwa-badge-warning {
+    background: rgba(245, 158, 11, 0.15);
+    color: #f59e0b;
+    border: 1px solid rgba(245, 158, 11, 0.3);
+  }
+
+  /* Metrics Grid (Identical to /me) */
+  .cwa-metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .cwa-metric-box {
+    background: rgba(18, 25, 38, 0.65);
+    border: 1px solid rgba(255, 255, 255, 0.07);
+    border-radius: 12px;
+    padding: 16px 20px;
+  }
+
+  .cwa-metric-label {
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: #94a3b8;
+    margin-bottom: 6px;
+    font-weight: 600;
+  }
+
+  .cwa-metric-value {
+    font-size: 22px;
+    font-weight: 800;
+    letter-spacing: -0.5px;
+  }
+
+  .cwa-metric-value.cyan { color: #38bdf8; }
+  .cwa-metric-value.green { color: #34d399; }
+  .cwa-metric-value.amber { color: #fbbf24; }
+
+  /* CWA Panel Surface (Identical to /me & /cwa-settings) */
+  .cwa-panel {
+    background: rgba(18, 25, 38, 0.75);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 14px;
+    padding: 24px;
+    box-shadow: 0 16px 40px rgba(0, 0, 0, 0.4);
+  }
+
+  .cwa-panel-title {
+    font-size: 18px;
+    font-weight: 700;
+    letter-spacing: -0.3px;
+    color: #ffffff;
+    margin: 0 0 16px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+  }
+
+  /* Sub-tabs inside CWA panel */
+  .cwa-subnav {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 20px;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.07);
+    padding-bottom: 12px;
+  }
+
+  .cwa-tab-btn {
     display: inline-flex;
     align-items: center;
     gap: 8px;
-    padding: 8px 14px;
+    padding: 8px 16px;
     background: transparent;
-    border: none;
-    border-bottom: 2px solid transparent;
-    color: var(--text-secondary);
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    transition: color 0.15s ease, border-color 0.15s ease;
-  }
-
-  .tab-link:hover {
-    color: var(--text-primary);
-  }
-
-  .tab-link.active {
-    color: var(--text-primary);
-    border-bottom-color: var(--accent);
-    font-weight: 600;
-  }
-
-  .tab-badge {
-    font-size: 12px;
-    background: rgba(255, 255, 255, 0.08);
-    color: var(--text-secondary);
-    padding: 1px 7px;
-    border-radius: var(--radius-sm);
-  }
-
-  .tab-link.active .tab-badge {
-    background: var(--accent-glow);
-    color: var(--accent);
-  }
-
-  /* Notification Banner */
-  .notification-banner {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 10px 14px;
-    border-radius: var(--radius-sm);
-    font-size: 14px;
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-primary);
-  }
-
-  .notification-banner.success {
-    border-color: rgba(34, 197, 94, 0.35);
-    background: rgba(34, 197, 94, 0.08);
-    color: #4ade80;
-  }
-
-  .notification-banner.error {
-    border-color: rgba(239, 68, 68, 0.35);
-    background: rgba(239, 68, 68, 0.08);
-    color: #f87171;
-  }
-
-  .notification-close {
-    background: transparent;
-    border: none;
-    color: inherit;
-    cursor: pointer;
-    font-size: 12px;
-    padding: 2px 6px;
-  }
-
-  /* Search Panel */
-  .search-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  .search-form-card {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-primary);
-    border-radius: var(--radius-md);
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-
-  .search-inputs-grid {
-    display: grid;
-    grid-template-columns: 1fr 200px 180px auto;
-    gap: 12px;
-    align-items: flex-end;
-  }
-
-  .form-field {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-  }
-
-  .field-label {
-    font-size: 12px;
-    font-weight: 500;
-    color: var(--text-secondary);
-  }
-
-  .input-with-button {
-    position: relative;
-    display: flex;
-    align-items: center;
-  }
-
-  .text-input, .select-input {
-    width: 100%;
-    height: 38px;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-primary);
-    border-radius: var(--radius-sm);
-    padding: 0 12px;
-    color: var(--text-primary);
-    font-size: 14px;
-    outline: none;
-    transition: border-color 0.15s ease, box-shadow 0.15s ease;
-  }
-
-  .text-input:focus, .select-input:focus {
-    border-color: var(--accent);
-    box-shadow: 0 0 0 1px var(--accent);
-  }
-
-  .clear-input-btn {
-    position: absolute;
-    right: 8px;
-    background: transparent;
-    border: none;
-    color: var(--text-muted);
-    cursor: pointer;
-    padding: 4px;
-    font-size: 12px;
-  }
-
-  .clear-input-btn:hover {
-    color: var(--text-primary);
-  }
-
-  .search-submit-btn {
-    height: 38px;
-    padding: 0 16px;
-  }
-
-  .direct-md5-note {
+    border: 1px solid transparent;
+    border-radius: 8px;
+    color: #94a3b8;
     font-size: 13px;
-    color: var(--text-secondary);
-    background: rgba(255, 255, 255, 0.03);
-    border: 1px solid var(--border-primary);
-    border-radius: var(--radius-sm);
-    padding: 8px 12px;
-  }
-
-  .note-label {
     font-weight: 600;
-    color: var(--accent);
+    cursor: pointer;
+    transition: all 0.15s ease;
   }
 
-  /* Provider Errors */
-  .provider-errors-list {
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
+  .cwa-tab-btn:hover {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.05);
   }
 
-  .error-item {
+  .cwa-tab-btn.active {
+    background: rgba(56, 189, 248, 0.12);
+    border-color: rgba(56, 189, 248, 0.35);
+    color: #38bdf8;
+  }
+
+  /* Search row */
+  .cwa-search-bar-row {
     display: flex;
+    gap: 10px;
+    flex-wrap: wrap;
     align-items: center;
-    gap: 8px;
-    font-size: 13px;
-    background: rgba(239, 68, 68, 0.08);
-    border: 1px solid rgba(239, 68, 68, 0.2);
-    border-radius: var(--radius-sm);
-    padding: 8px 12px;
-    color: #fca5a5;
   }
 
-  .error-source {
-    font-weight: 600;
-    color: #f87171;
-  }
-
-  .error-message {
+  .search-input-wrap {
     flex: 1;
+    min-width: 280px;
+    position: relative;
   }
 
-  .error-action-link {
+  .cwa-input, .cwa-select {
+    height: 38px;
+    background: rgba(11, 15, 25, 0.8) !important;
+    border: 1px solid rgba(255, 255, 255, 0.12) !important;
+    border-radius: 8px !important;
+    color: #ffffff !important;
+    font-size: 13.5px !important;
+    padding: 0 12px !important;
+    outline: none;
+  }
+
+  .cwa-input:focus, .cwa-select:focus {
+    border-color: #38bdf8 !important;
+    box-shadow: 0 0 0 2px rgba(56, 189, 248, 0.2) !important;
+  }
+
+  .clear-btn {
+    position: absolute;
+    right: 10px;
+    top: 50%;
+    transform: translateY(-50%);
     background: transparent;
     border: none;
-    color: var(--text-primary);
-    font-size: 12px;
-    text-decoration: underline;
+    color: #64748b;
     cursor: pointer;
   }
 
-  /* Data Table */
-  .table-card {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-primary);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-  }
-
-  .table-header-info {
-    padding: 12px 16px;
-    border-bottom: 1px solid var(--border-primary);
-    font-size: 13px;
-    color: var(--text-secondary);
-  }
-
-  .results-count {
-    font-weight: 500;
-  }
-
-  .data-table {
+  /* CWA Table Style (Matching /me tables) */
+  .cwa-table {
     width: 100%;
     border-collapse: collapse;
-    font-size: 14px;
-    text-align: left;
+    margin-bottom: 0;
   }
 
-  .data-table th {
-    background: rgba(255, 255, 255, 0.02);
-    padding: 10px 14px;
-    font-size: 12px;
+  .cwa-table th {
+    background: rgba(11, 15, 25, 0.6);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.1) !important;
+    color: #94a3b8;
+    font-size: 11px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
     font-weight: 600;
-    color: var(--text-secondary);
-    border-bottom: 1px solid var(--border-primary);
+    padding: 10px 14px !important;
   }
 
-  .data-table td {
-    padding: 12px 14px;
-    border-bottom: 1px solid var(--border-primary);
-    color: var(--text-primary);
-    vertical-align: middle;
+  .cwa-table td {
+    padding: 12px 14px !important;
+    border-bottom: 1px solid rgba(255, 255, 255, 0.05) !important;
+    vertical-align: middle !important;
+    color: #e2e8f0;
+    font-size: 13px;
   }
 
-  .data-table tbody tr:last-child td {
-    border-bottom: none;
+  .cwa-table tbody tr:hover {
+    background: rgba(255, 255, 255, 0.03);
   }
 
-  .data-table tbody tr:hover {
-    background: rgba(255, 255, 255, 0.02);
-  }
-
-  .col-thumb {
-    width: 44px;
-    padding-right: 0;
-  }
-
-  .book-thumb {
-    width: 36px;
-    height: 50px;
+  .cwa-book-thumb {
+    width: 32px;
+    height: 46px;
     object-fit: cover;
-    border-radius: 3px;
-    border: 1px solid var(--border-primary);
-    display: block;
+    border-radius: 4px;
+    border: 1px solid rgba(255, 255, 255, 0.1);
   }
 
-  .book-thumb-empty {
-    width: 36px;
-    height: 50px;
-    background: var(--bg-primary);
-    border: 1px solid var(--border-primary);
-    border-radius: 3px;
+  .cwa-book-thumb-empty {
+    width: 32px;
+    height: 46px;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: var(--text-muted);
+    font-size: 13px;
   }
 
-  .book-title {
+  .cwa-row-title {
     font-weight: 600;
-    color: var(--text-primary);
+    color: #ffffff;
+  }
+
+  .cwa-row-author {
+    font-size: 12px;
+    color: #94a3b8;
+  }
+
+  .cwa-tag-format, .cwa-mono-cell {
+    font-family: var(--font-mono, monospace);
+    font-size: 12px;
+  }
+
+  /* Operation Cards matching /me */
+  .cwa-op-card {
+    background: rgba(19, 27, 42, 0.6);
+    border: 1px solid rgba(255, 255, 255, 0.08);
+    border-radius: 10px;
+    padding: 14px 18px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: all 0.2s ease;
+    text-decoration: none;
+    color: inherit;
+  }
+
+  .cwa-op-card:hover {
+    background: rgba(30, 41, 59, 0.7);
+    border-color: rgba(56, 189, 248, 0.3);
+    text-decoration: none;
+    transform: translateY(-1px);
+  }
+
+  .op-title {
+    font-size: 14px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 2px;
+  }
+
+  .op-desc {
+    font-size: 12px;
+    color: #94a3b8;
+  }
+
+  /* Settings rows matching /cwa-settings */
+  .cwa-setting-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+  }
+
+  .cwa-setting-title {
+    font-size: 14.5px;
+    font-weight: 600;
+    color: #ffffff;
+    margin-bottom: 3px;
+    display: flex;
+    align-items: center;
+  }
+
+  .cwa-setting-desc {
+    font-size: 12.5px;
+    color: #94a3b8;
     line-height: 1.4;
   }
 
-  .book-author {
-    font-size: 12px;
-    color: var(--text-secondary);
-    margin-top: 2px;
-  }
-
-  .source-tag {
-    font-size: 12px;
-    color: var(--text-secondary);
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border-primary);
-    padding: 2px 8px;
-    border-radius: var(--radius-sm);
-  }
-
-  .format-tag {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
-
-  .tabular-text {
-    font-family: var(--font-mono);
-    font-size: 12px;
-    color: var(--text-secondary);
-  }
-
-  .btn-download {
-    font-size: 12px;
-    height: 32px;
-    padding: 0 12px;
-  }
-
-  .btn-download.btn-success {
-    background: rgba(34, 197, 94, 0.15);
-    border-color: rgba(34, 197, 94, 0.3);
-    color: #4ade80;
-  }
-
-  .btn-download.btn-error {
-    border-color: rgba(239, 68, 68, 0.3);
-    color: #f87171;
-  }
-
-  /* Empty & Loading States */
-  .state-box {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-primary);
-    border-radius: var(--radius-md);
-    padding: 48px 24px;
-    text-align: center;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .state-title {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0;
-  }
-
-  .state-desc {
-    font-size: 14px;
-    color: var(--text-secondary);
-    max-width: 520px;
-    margin: 0;
-    line-height: 1.5;
-  }
-
-  /* Structured Skeleton Loading */
-  .skeleton {
-    background: rgba(255, 255, 255, 0.06);
-    border-radius: 4px;
-  }
-
-  .skeleton-thumb {
-    width: 36px;
-    height: 50px;
-  }
-
-  .skeleton-text {
-    height: 14px;
-    margin-bottom: 4px;
-  }
-
-  .skeleton-sub {
-    height: 11px;
-  }
-
-  .skeleton-badge {
-    width: 70px;
-    height: 20px;
-  }
-
-  .skeleton-button {
-    width: 90px;
-    height: 30px;
-  }
-
-  .spinner-inline {
-    width: 12px;
-    height: 12px;
-    border: 2px solid currentColor;
-    border-top-color: transparent;
-    border-radius: 50%;
-    animation: spin 0.7s linear infinite;
-    display: inline-block;
-  }
-
-  @keyframes spin {
-    to { transform: rotate(360deg); }
-  }
-
-  /* ========================================================================= */
-  /* TAB: CONFIGURAÇÕES DE FONTES                                              */
-  /* ========================================================================= */
-  .settings-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .notice-callout {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    background: rgba(56, 189, 248, 0.08);
-    border: 1px solid rgba(56, 189, 248, 0.2);
-    border-radius: var(--radius-sm);
-    padding: 10px 14px;
-    font-size: 13px;
-    color: #bae6fd;
-  }
-
-  .providers-list {
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .provider-card {
-    background: var(--bg-secondary);
-    border: 1px solid var(--border-primary);
-    border-radius: var(--radius-md);
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .provider-card-header {
-    display: flex;
-    align-items: flex-start;
-    justify-content: space-between;
-    gap: 16px;
-  }
-
-  .provider-title-area {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    flex-wrap: wrap;
-  }
-
-  .provider-name {
-    font-size: 16px;
-    font-weight: 600;
-    color: var(--text-primary);
-    margin: 0;
-  }
-
-  .status-badge {
-    font-size: 11px;
-    font-weight: 500;
-    padding: 2px 8px;
-    border-radius: var(--radius-sm);
-    border: 1px solid var(--border-primary);
-    color: var(--text-secondary);
-  }
-
-  .status-badge.status-active {
-    background: rgba(34, 197, 94, 0.12);
-    border-color: rgba(34, 197, 94, 0.25);
-    color: #4ade80;
-  }
-
-  .status-badge.status-inactive {
-    background: rgba(245, 158, 11, 0.12);
-    border-color: rgba(245, 158, 11, 0.25);
-    color: #fcd34d;
-  }
-
-  .provider-toggle {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-  }
-
-  .toggle-switch {
+  /* CWA Native Switch Slider (Exact match to /cwa-settings) */
+  .cwa-switch {
     position: relative;
     display: inline-block;
-    width: 36px;
-    height: 20px;
+    width: 44px;
+    height: 24px;
+    margin: 0;
     cursor: pointer;
   }
 
-  .toggle-switch input {
+  .cwa-switch input {
     opacity: 0;
     width: 0;
     height: 0;
   }
 
-  .toggle-slider {
+  .cwa-slider {
     position: absolute;
-    inset: 0;
-    background: rgba(255, 255, 255, 0.15);
-    border-radius: 9999px;
-    transition: 0.2s ease;
+    cursor: pointer;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background-color: rgba(255, 255, 255, 0.15);
+    transition: 0.25s ease;
+    border-radius: 24px;
   }
 
-  .toggle-slider::before {
+  .cwa-slider:before {
     position: absolute;
     content: "";
-    height: 14px;
-    width: 14px;
+    height: 18px;
+    width: 18px;
     left: 3px;
     bottom: 3px;
-    background: white;
+    background-color: white;
+    transition: 0.25s ease;
     border-radius: 50%;
-    transition: 0.2s ease;
   }
 
-  .toggle-switch input:checked + .toggle-slider {
-    background: var(--accent);
+  .cwa-switch input:checked + .cwa-slider {
+    background-color: #3b82f6;
   }
 
-  .toggle-switch input:checked + .toggle-slider::before {
-    transform: translateX(16px);
+  .cwa-switch input:checked + .cwa-slider:before {
+    transform: translateX(20px);
   }
 
-  .toggle-label {
+  /* Alert banners */
+  .cwa-alert {
+    padding: 10px 14px;
+    border-radius: 8px;
     font-size: 13px;
-    color: var(--text-secondary);
-  }
-
-  .provider-description {
-    font-size: 13px;
-    color: var(--text-secondary);
-    line-height: 1.5;
-    margin: 0;
-  }
-
-  .provider-fields-form {
-    display: flex;
-    flex-direction: column;
-    gap: 14px;
-    border-top: 1px solid var(--border-primary);
-    padding-top: 16px;
-  }
-
-  .form-group {
-    display: flex;
-    flex-direction: column;
-    gap: 6px;
-    max-width: 600px;
-  }
-
-  .field-header {
+    margin-bottom: 16px;
     display: flex;
     justify-content: space-between;
     align-items: center;
   }
 
-  .required-indicator {
-    color: var(--danger);
-  }
-
-  .link-button {
-    background: transparent;
-    border: none;
-    color: var(--text-secondary);
-    font-size: 12px;
-    cursor: pointer;
-    text-decoration: underline;
-  }
-
-  .link-button:hover {
-    color: var(--text-primary);
-  }
-
-  .helper-text-block {
-    font-size: 12px;
-    color: var(--text-secondary);
-    line-height: 1.4;
-  }
-
-  .helper-text-block code {
-    background: rgba(255, 255, 255, 0.08);
-    padding: 1px 4px;
-    border-radius: 3px;
-    color: var(--text-primary);
-  }
-
-  .quick-links {
-    display: flex;
-    gap: 6px;
-    flex-wrap: wrap;
-    margin-top: 4px;
-  }
-
-  .link-pill {
-    background: rgba(255, 255, 255, 0.05);
-    border: 1px solid var(--border-primary);
-    border-radius: var(--radius-sm);
-    color: var(--text-secondary);
-    padding: 2px 8px;
-    font-size: 11px;
-    cursor: pointer;
-  }
-
-  .link-pill:hover {
-    color: var(--text-primary);
-    border-color: var(--border-secondary);
-  }
-
-  .provider-actions {
-    display: flex;
-    gap: 10px;
-    margin-top: 8px;
-  }
-
-  .inline-feedback {
-    font-size: 13px;
-    padding: 8px 12px;
-    border-radius: var(--radius-sm);
-  }
-
-  .inline-feedback.feedback-success {
-    background: rgba(34, 197, 94, 0.08);
-    border: 1px solid rgba(34, 197, 94, 0.25);
+  .cwa-alert-success {
+    background: rgba(34, 197, 94, 0.12);
+    border: 1px solid rgba(34, 197, 94, 0.3);
     color: #4ade80;
   }
 
-  .inline-feedback.feedback-error {
-    background: rgba(239, 68, 68, 0.08);
-    border: 1px solid rgba(239, 68, 68, 0.25);
+  .cwa-alert-warning {
+    background: rgba(245, 158, 11, 0.12);
+    border: 1px solid rgba(245, 158, 11, 0.3);
+    color: #fcd34d;
+  }
+
+  .cwa-alert-danger {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.3);
     color: #f87171;
   }
 
-  .free-source-notice {
-    font-size: 13px;
-    color: var(--text-secondary);
-    border-top: 1px solid var(--border-primary);
-    padding-top: 14px;
+  .cwa-alert-close {
+    background: transparent;
+    border: none;
+    color: inherit;
+    cursor: pointer;
+    font-size: 12px;
   }
 
-  @media (max-width: 900px) {
-    .search-inputs-grid {
-      grid-template-columns: 1fr;
-    }
+  .cwa-hint-box {
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.2);
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #bae6fd;
+  }
+
+  .cwa-fields-group {
+    background: rgba(11, 15, 25, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.05);
+    border-radius: 10px;
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .cwa-field-row {
+    max-width: 540px;
+  }
+
+  /* Buttons matching cwa.css */
+  .btn-xs {
+    padding: 2px 8px !important;
+    font-size: 11px !important;
   }
 </style>

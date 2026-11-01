@@ -837,3 +837,314 @@ const cwaBackupHTML = `<!DOCTYPE html>
     </script>
 </body>
 </html>`
+
+
+const cwaSourcesHTML = `<!DOCTYPE html>
+<html lang="en">
+<head>
+    <title>Calibre-Web Automated | Book Sources</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="/static/css/libs/bootstrap.min.css" rel="stylesheet" media="screen">
+    <link href="/static/css/style.css" rel="stylesheet" media="screen">
+    <link href="/static/css/caliBlur.css" rel="stylesheet" media="screen">
+    <link href="/static/css/caliBlur_override.css" rel="stylesheet" media="screen">
+    <link href="/static/css/layout-refresh.css" rel="stylesheet" media="screen">
+    <link href="/static/css/cwa.css?v=2026.5" rel="stylesheet" media="screen">
+    <style>
+        .cwa-book-thumb { width: 36px; height: 50px; object-fit: cover; border-radius: 4px; border: 1px solid rgba(255,255,255,0.1); }
+        .cwa-thumb-ph { width: 36px; height: 50px; background: rgba(255,255,255,0.05); border-radius: 4px; display: inline-flex; align-items: center; justify-content: center; }
+        .cwa-subnav { display: flex; gap: 10px; margin-bottom: 20px; border-bottom: 1px solid rgba(255,255,255,0.08); padding-bottom: 12px; }
+        .cwa-tab-btn { background: transparent; border: 1px solid transparent; border-radius: 8px; color: #94a3b8; font-size: 13px; font-weight: 600; padding: 8px 16px; cursor: pointer; }
+        .cwa-tab-btn.active { background: rgba(56, 189, 248, 0.12); border-color: rgba(56, 189, 248, 0.35); color: #38bdf8; }
+        .cwa-field-row { max-width: 580px; margin-bottom: 14px; }
+    </style>
+</head>
+<body class="discover blur">
+    <div class="navbar navbar-default navbar-static-top" role="navigation">
+        <div class="container-fluid">
+            <div class="navbar-header">
+                <a class="navbar-brand" href="/"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="margin-right: 8px; flex-shrink: 0;"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>Calibre-Web Automated <span class="label label-warning" style="font-size: 10px; vertical-align: middle; margin-left: 5px;">CWA</span></a>
+            </div>
+            <div class="navbar-collapse collapse">
+                <ul class="nav navbar-nav navbar-right" id="main-nav">
+                    <li><a href="/"><span class="glyphicon glyphicon-book"></span> Library</a></li>
+                    <li><a href="/tasks"><span class="glyphicon glyphicon-tasks"></span> Tasks</a></li>
+                    <li><a href="/admin"><span class="glyphicon glyphicon-dashboard"></span> Admin</a></li>
+                    <li><a href="/cwa-settings"><span class="glyphicon glyphicon-cog"></span> CWA Settings</a></li>
+                    <li class="active"><a href="/cwa-sources"><span class="glyphicon glyphicon-cloud-download"></span> Sources</a></li>
+                    <li><a href="/cwa-stats"><span class="glyphicon glyphicon-stats"></span> Deep Analytics</a></li>
+                </ul>
+            </div>
+        </div>
+    </div>
+
+    <div class="cwa-container">
+        <div class="cwa-page-header">
+            <div>
+                <a href="/" class="btn btn-default cwa-back-btn" style="margin-bottom: 12px;">
+                    <span class="glyphicon glyphicon-arrow-left"></span> Back to Library
+                </a>
+                <h1 class="cwa-page-title">
+                    <span class="glyphicon glyphicon-cloud-download" style="color: #38bdf8;"></span>
+                    Book Sources &amp; Acquisition Hub
+                </h1>
+                <p class="cwa-page-subtitle">Search, discover, and download books from Anna's Archive, Z-Library, Open Library and Gutenberg directly into Calibre-Web ingestion.</p>
+            </div>
+            <div>
+                <span class="cwa-badge cwa-badge-info">CWA Ingestion Engine</span>
+            </div>
+        </div>
+
+        <div id="sources-alert" class="cwa-alert cwa-alert-success" style="display: none;"></div>
+
+        <div class="cwa-metrics-grid">
+            <div class="cwa-metric-box">
+                <div class="cwa-metric-label">Integrated Sources</div>
+                <div class="cwa-metric-value cyan">4 Providers</div>
+            </div>
+            <div class="cwa-metric-box">
+                <div class="cwa-metric-label">Auto-Ingest Pipeline</div>
+                <div class="cwa-metric-value green">Active / Real-time</div>
+            </div>
+            <div class="cwa-metric-box">
+                <div class="cwa-metric-label">Primary Formats</div>
+                <div class="cwa-metric-value amber">EPUB • PDF • MOBI</div>
+            </div>
+        </div>
+
+        <div class="cwa-panel">
+            <div class="cwa-subnav">
+                <button type="button" class="cwa-tab-btn active" id="tab-btn-search" onclick="switchTab('search')">
+                    <span class="glyphicon glyphicon-search"></span> Search &amp; Download
+                </button>
+                <button type="button" class="cwa-tab-btn" id="tab-btn-settings" onclick="switchTab('settings')">
+                    <span class="glyphicon glyphicon-cog"></span> Provider Settings &amp; API Keys
+                </button>
+            </div>
+
+            <!-- TAB 1: Search -->
+            <div id="panel-search">
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 20px;">
+                    <div style="flex: 1; min-width: 280px;">
+                        <input type="text" id="src-query" class="form-control" style="height: 38px; background: rgba(11,15,25,0.8); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 8px;" placeholder="Enter book title, author, or Anna's Archive MD5 hash..." onkeydown="if(event.key==='Enter') doSearch();">
+                    </div>
+                    <div style="width: 200px;">
+                        <select id="src-filter" class="form-control" style="height: 38px; background: rgba(11,15,25,0.8); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 8px;">
+                            <option value="">All Active Sources</option>
+                            <option value="annas">Anna's Archive</option>
+                            <option value="zlibrary">Z-Library</option>
+                            <option value="openlibrary">Open Library</option>
+                            <option value="gutenberg">Project Gutenberg</option>
+                        </select>
+                    </div>
+                    <button type="button" class="btn btn-primary" style="height: 38px; padding: 0 20px;" onclick="doSearch()">
+                        <span class="glyphicon glyphicon-search"></span> Search
+                    </button>
+                </div>
+
+                <div id="search-status" style="display: none; padding: 20px; text-align: center; color: #94a3b8;"></div>
+
+                <div id="results-table-wrap" style="display: none;">
+                    <h2 class="cwa-panel-title" style="font-size: 15px; margin-bottom: 10px;">Search Results</h2>
+                    <table class="table cwa-table">
+                        <thead>
+                            <tr>
+                                <th style="width: 44px;"></th>
+                                <th>Title &amp; Author</th>
+                                <th>Source</th>
+                                <th>Format</th>
+                                <th>Year</th>
+                                <th>Size</th>
+                                <th style="text-align: right; width: 140px;">Action</th>
+                            </tr>
+                        </thead>
+                        <tbody id="results-tbody"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- TAB 2: Settings -->
+            <div id="panel-settings" style="display: none;">
+                <h2 class="cwa-panel-title" style="font-size: 16px;">Provider Credentials &amp; Mirrors</h2>
+                <div id="providers-container"></div>
+            </div>
+        </div>
+    </div>
+
+    <script src="/static/js/libs/jquery.min.js"></script>
+    <script src="/static/js/libs/bootstrap.min.js"></script>
+    <script>
+    let currentSources = [];
+
+    function switchTab(t) {
+        if (t === 'search') {
+            $('#panel-search').show();
+            $('#panel-settings').hide();
+            $('#tab-btn-search').addClass('active');
+            $('#tab-btn-settings').removeClass('active');
+        } else {
+            $('#panel-search').hide();
+            $('#panel-settings').show();
+            $('#tab-btn-search').removeClass('active');
+            $('#tab-btn-settings').addClass('active');
+            loadProviders();
+        }
+    }
+
+    function doSearch() {
+        const q = $('#src-query').val().trim();
+        if (q.length < 2) { alert('Please enter at least 2 characters.'); return; }
+        const src = $('#src-filter').val();
+        $('#search-status').text('Querying providers...').show();
+        $('#results-table-wrap').hide();
+
+        let url = '/api/sources/search?q=' + encodeURIComponent(q);
+        if (src) url += '&source=' + encodeURIComponent(src);
+
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                $('#search-status').hide();
+                const items = data.results || [];
+                if (items.length === 0) {
+                    $('#search-status').text('No books found matching "' + q + '".').show();
+                    return;
+                }
+                const $tb = $('#results-tbody').empty();
+                items.forEach((r, idx) => {
+                    const coverHtml = r.cover ? '<img src="' + r.cover + '" class="cwa-book-thumb">' : '<div class="cwa-thumb-ph">📖</div>';
+                    const row = $('<tr>')
+                        .append($('<td>').html(coverHtml))
+                        .append($('<td>').html('<div style="font-weight:600;color:#fff;">' + escapeHtml(r.title) + '</div><div style="font-size:12px;color:#94a3b8;">' + escapeHtml(r.author || 'Unknown author') + '</div>'))
+                        .append($('<td>').html('<span class="cwa-badge cwa-badge-info">' + escapeHtml(r.source) + '</span>'))
+                        .append($('<td>').html('<span style="font-family:monospace;font-size:12px;">' + (r.format || 'EPUB').toUpperCase() + '</span>'))
+                        .append($('<td>').html('<span style="font-family:monospace;font-size:12px;">' + (r.year || '—') + '</span>'))
+                        .append($('<td>').html('<span style="font-family:monospace;font-size:12px;">' + (r.size || '—') + '</span>'))
+                        .append($('<td style="text-align:right;">').html('<button type="button" class="btn btn-primary btn-sm btn-dl" data-idx="' + idx + '"><span class="glyphicon glyphicon-download-alt"></span> Ingest</button>'));
+                    
+                    row.find('.btn-dl').on('click', function() {
+                        const $btn = $(this).prop('disabled', true).text('Ingesting...');
+                        fetch('/api/sources/download', {
+                            method: 'POST',
+                            headers: {'Content-Type': 'application/json'},
+                            body: JSON.stringify({source: r.source, id: r.id})
+                        })
+                        .then(res => res.json())
+                        .then(resData => {
+                            if (resData.status === 'success') {
+                                $btn.text('✓ Ingested').removeClass('btn-primary').addClass('btn-success');
+                            } else {
+                                alert(resData.error || 'Download failed');
+                                $btn.prop('disabled', false).text('Retry');
+                            }
+                        })
+                        .catch(() => {
+                            alert('Network error');
+                            $btn.prop('disabled', false).text('Retry');
+                        });
+                    });
+                    $tb.append(row);
+                });
+                $('#results-table-wrap').show();
+            })
+            .catch(() => {
+                $('#search-status').text('Error connecting to sources search API.').show();
+            });
+    }
+
+    function loadProviders() {
+        fetch('/api/sources')
+            .then(r => r.json())
+            .then(d => {
+                currentSources = d.sources || [];
+                const $c = $('#providers-container').empty();
+                currentSources.forEach(s => {
+                    const $card = $('<div class="cwa-setting-row" style="flex-direction:column;align-items:stretch;margin-bottom:24px;padding-bottom:20px;border-bottom:1px solid rgba(255,255,255,0.06);">');
+                    const headHtml = '<div style="display:flex;justify-content:space-between;align-items:flex-start;">' +
+                        '<div>' +
+                            '<div class="cwa-setting-title"><span class="glyphicon glyphicon-cloud" style="color:#38bdf8;margin-right:6px;"></span> ' + escapeHtml(s.name) +
+                            ' <span class="cwa-badge ' + (s.enabled && s.configured ? 'cwa-badge-info' : 'cwa-badge-warning') + '" style="margin-left:8px;">' + (s.enabled && s.configured ? 'Active' : 'Setup Required') + '</span></div>' +
+                            '<div class="cwa-setting-desc">' + escapeHtml(s.description) + '</div>' +
+                        '</div>' +
+                        '<div>' +
+                            '<label class="cwa-switch">' +
+                                '<input type="checkbox" id="toggle-' + s.id + '" ' + (s.enabled ? 'checked' : '') + '>' +
+                                '<span class="cwa-slider"></span>' +
+                            '</label>' +
+                        '</div>' +
+                    '</div>';
+                    $card.append(headHtml);
+
+                    if (s.fields && s.fields.length > 0) {
+                        const $fgroup = $('<div style="background:rgba(11,15,25,0.4);border:1px solid rgba(255,255,255,0.05);border-radius:10px;padding:16px;margin-top:12px;">');
+                        s.fields.forEach(f => {
+                            const val = (s.values && s.values[f.key]) || '';
+                            const frow = '<div class="cwa-field-row">' +
+                                '<label style="font-size:12px;font-weight:600;color:#cbd5e1;margin-bottom:4px;display:block;">' + escapeHtml(f.label) + '</label>' +
+                                '<input type="' + (f.secret ? 'password' : 'text') + '" id="field-' + s.id + '-' + f.key + '" class="form-control cwa-input" value="' + escapeHtml(val) + '" placeholder="' + escapeHtml(f.default || '') + '">' +
+                            '</div>';
+                            $fgroup.append(frow);
+                        });
+
+                        const actions = $('<div style="display:flex;gap:10px;margin-top:12px;">' +
+                            '<button type="button" class="btn btn-default btn-test">Test Connection</button>' +
+                            '<button type="button" class="btn btn-primary btn-save">Save Settings</button>' +
+                            '<span class="save-status" style="margin-left:10px;align-self:center;font-size:12px;"></span>' +
+                        '</div>');
+
+                        actions.find('.btn-test').on('click', function() {
+                            const $status = actions.find('.save-status').text('Testing...').css('color', '#38bdf8');
+                            const vals = {};
+                            s.fields.forEach(f => { vals[f.key] = $('#field-' + s.id + '-' + f.key).val(); });
+                            fetch('/api/sources/' + s.id + '/test', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({values: vals})
+                            })
+                            .then(r => r.json())
+                            .then(d => {
+                                if (d.status === 'success') {
+                                    $status.text('✓ Connected!').css('color', '#34d399');
+                                } else {
+                                    $status.text('✕ ' + (d.error || 'Failed')).css('color', '#f87171');
+                                }
+                            });
+                        });
+
+                        actions.find('.btn-save').on('click', function() {
+                            const $status = actions.find('.save-status').text('Saving...').css('color', '#38bdf8');
+                            const vals = {};
+                            s.fields.forEach(f => { vals[f.key] = $('#field-' + s.id + '-' + f.key).val(); });
+                            const enabled = $('#toggle-' + s.id).is(':checked');
+                            fetch('/api/sources/' + s.id + '/config', {
+                                method: 'POST',
+                                headers: {'Content-Type': 'application/json'},
+                                body: JSON.stringify({values: vals, enabled: enabled})
+                            })
+                            .then(r => r.json())
+                            .then(d => {
+                                if (d.status === 'success') {
+                                    $status.text('✓ Saved!').css('color', '#34d399');
+                                    setTimeout(() => loadProviders(), 1000);
+                                } else {
+                                    $status.text('✕ ' + (d.error || 'Failed')).css('color', '#f87171');
+                                }
+                            });
+                        });
+
+                        $fgroup.append(actions);
+                        $card.append($fgroup);
+                    }
+                    $c.append($card);
+                });
+            });
+    }
+
+    function escapeHtml(text) {
+        if (!text) return '';
+        return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+    }
+    </script>
+</body>
+</html>`
