@@ -196,6 +196,16 @@ func (h *Handler) ServeStatic(w http.ResponseWriter, r *http.Request) {
 
 	fi, err := os.Stat(fullPath)
 	if err != nil || fi.IsDir() {
+		// Aliases de compatibilidade para capas genéricas e leitores EPUB
+		if relPath == "images/cover_placeholder.svg" || relPath == "cover_placeholder.svg" {
+			fallbackCover := filepath.Join(h.staticDir, "generic_cover.svg")
+			if fiC, errC := os.Stat(fallbackCover); errC == nil && !fiC.IsDir() {
+				w.Header().Set("Cache-Control", "public, max-age=86400")
+				w.Header().Set("Content-Type", "image/svg+xml")
+				http.ServeFile(w, r, fallbackCover)
+				return
+			}
+		}
 		// Aliases comuns de compatibilidade para leitores EPUB
 		if relPath == "js/libs/jszip.min.js" || relPath == "js/libs/jszip.js" {
 			fallbackZip := filepath.Join(h.staticDir, "js", "compress", "jszip_epub.min.js")
@@ -225,8 +235,14 @@ func (h *Handler) CurrentUser(r *http.Request) *database.User {
 	if u := auth.UserFromContext(r.Context()); u != nil {
 		return u
 	}
-	if cookie, err := r.Cookie("session"); err == nil && cookie.Value != "" {
-		if u, err := h.db.GetUserBySessionKey(r.Context(), cookie.Value); err == nil && u != nil {
+	var token string
+	if c, err := r.Cookie("session"); err == nil && c.Value != "" {
+		token = c.Value
+	} else if c, err := r.Cookie("session_key"); err == nil && c.Value != "" {
+		token = c.Value
+	}
+	if token != "" {
+		if u, err := h.db.GetUserBySessionKey(r.Context(), token); err == nil && u != nil {
 			return u
 		}
 	}
@@ -237,8 +253,14 @@ func (h *Handler) CurrentUser(r *http.Request) *database.User {
 func (h *Handler) AuthMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		var currentUser *database.User
-		if cookie, err := r.Cookie("session"); err == nil && cookie.Value != "" {
-			if u, err := h.db.GetUserBySessionKey(r.Context(), cookie.Value); err == nil && u != nil {
+		var token string
+		if c, err := r.Cookie("session"); err == nil && c.Value != "" {
+			token = c.Value
+		} else if c, err := r.Cookie("session_key"); err == nil && c.Value != "" {
+			token = c.Value
+		}
+		if token != "" {
+			if u, err := h.db.GetUserBySessionKey(r.Context(), token); err == nil && u != nil {
 				currentUser = u
 			}
 		}

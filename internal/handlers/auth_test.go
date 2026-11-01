@@ -349,8 +349,12 @@ func TestKOSyncAndKoboSync(t *testing.T) {
 }
 
 func TestDuplicateResolutionAndDismissal(t *testing.T) {
-	_, h, cleanup := setupTestDB(t)
+	db, h, cleanup := setupTestDB(t)
 	defer cleanup()
+
+	sess := "test-admin-dup-sess"
+	_ = db.CreateUserSession(context.Background(), 1, sess)
+	adminCookie := &http.Cookie{Name: "session", Value: sess}
 
 	// 1. Preview da resolução
 	reqPrev := httptest.NewRequest(http.MethodPost, "/duplicates/preview-resolution", strings.NewReader(`{"strategy":"newest"}`))
@@ -386,6 +390,7 @@ func TestDuplicateResolutionAndDismissal(t *testing.T) {
 
 	// 4. Execução da resolução
 	reqExec := httptest.NewRequest(http.MethodPost, "/duplicates/execute-resolution", strings.NewReader(`{"strategy":"newest"}`))
+	reqExec.AddCookie(adminCookie)
 	reqExec.Header.Set("Content-Type", "application/json")
 	wExec := httptest.NewRecorder()
 	h.ExecuteResolution(wExec, reqExec)
@@ -442,11 +447,16 @@ func TestMetadataProviderAndSearch(t *testing.T) {
 }
 
 func TestBackupLifecycle(t *testing.T) {
-	_, h, cleanup := setupTestDB(t)
+	db, h, cleanup := setupTestDB(t)
 	defer cleanup()
+
+	sess := "test-admin-backup-sess"
+	_ = db.CreateUserSession(context.Background(), 1, sess)
+	adminCookie := &http.Cookie{Name: "session", Value: sess}
 
 	// 1. Criar backup
 	reqCreate := httptest.NewRequest(http.MethodPost, "/cwa-backup/create", nil)
+	reqCreate.AddCookie(adminCookie)
 	wCreate := httptest.NewRecorder()
 	h.CWABackupCreate(wCreate, reqCreate)
 	if wCreate.Code != http.StatusOK {
@@ -464,6 +474,7 @@ func TestBackupLifecycle(t *testing.T) {
 
 	// 2. Listar backups
 	reqList := httptest.NewRequest(http.MethodGet, "/cwa-backup/list", nil)
+	reqList.AddCookie(adminCookie)
 	wList := httptest.NewRecorder()
 	h.CWABackupList(wList, reqList)
 	if wList.Code != http.StatusOK {
@@ -472,6 +483,7 @@ func TestBackupLifecycle(t *testing.T) {
 
 	// 3. Download do backup
 	reqDown := httptest.NewRequest(http.MethodGet, "/cwa-backup/download/"+filename, nil)
+	reqDown.AddCookie(adminCookie)
 	reqDown.SetPathValue("filename", filename)
 	wDown := httptest.NewRecorder()
 	h.CWABackupDownload(wDown, reqDown)
@@ -484,6 +496,7 @@ func TestBackupLifecycle(t *testing.T) {
 
 	// 4. Apagar backup
 	reqDel := httptest.NewRequest(http.MethodPost, "/cwa-backup/delete/"+filename, nil)
+	reqDel.AddCookie(adminCookie)
 	reqDel.SetPathValue("filename", filename)
 	wDel := httptest.NewRecorder()
 	h.CWABackupDelete(wDel, reqDel)

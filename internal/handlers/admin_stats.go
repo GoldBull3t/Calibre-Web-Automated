@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/crocodilestick/calibre-web-go/internal/auth"
 	"github.com/crocodilestick/calibre-web-go/internal/database"
 	"github.com/crocodilestick/calibre-web-go/internal/formats"
 	"github.com/crocodilestick/calibre-web-go/internal/metadata"
@@ -21,6 +22,11 @@ import (
 
 // Admin entrega a página de administração completa do Calibre-Web.
 func (h *Handler) Admin(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleAdmin) {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
 	totalBooks, totalAuthors, totalSeries, _ := h.db.GetStats(r.Context())
 	users, _ := h.db.GetUsers(r.Context())
 
@@ -37,6 +43,11 @@ func (h *Handler) Admin(w http.ResponseWriter, r *http.Request) {
 
 // Tasks entrega a página de monitorização de tarefas do Calibre-Web.
 func (h *Handler) Tasks(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleAdmin) {
+		http.Redirect(w, r, "/login", http.StatusSeeOther)
+		return
+	}
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	_ = h.tasksTpl.ExecuteWriter(pongo2.Context{}, w)
 }
@@ -169,10 +180,36 @@ func (h *Handler) PreviewResolution(w http.ResponseWriter, r *http.Request) {
 // ExecuteResolution executa a resolução de duplicados unindo formatos e limpando órfãos.
 func (h *Handler) ExecuteResolution(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleEdit) {
+		http.Error(w, `{"error":"Sem permissão para resolver duplicados"}`, http.StatusForbidden)
+		return
+	}
+
 	var req struct {
-		Strategy string `json:"strategy"`
+		Strategy  string  `json:"strategy"`
+		KeptID    int64   `json:"kept_id"`
+		SourceIDs []int64 `json:"source_ids"`
 	}
 	_ = json.NewDecoder(r.Body).Decode(&req)
+
+	if req.KeptID > 0 && len(req.SourceIDs) > 0 {
+		err := h.db.MergeBookRecords(r.Context(), req.KeptID, req.SourceIDs, h.booksDir)
+		if err != nil {
+			w.WriteHeader(http.StatusInternalServerError)
+			_ = json.NewEncoder(w).Encode(map[string]any{"success": false, "error": err.Error()})
+			return
+		}
+		_ = json.NewEncoder(w).Encode(map[string]any{
+			"success":        true,
+			"resolved_count": 1,
+			"deleted_count":  len(req.SourceIDs),
+			"kept_count":     1,
+			"errors":         []string{},
+		})
+		return
+	}
+
 	if req.Strategy == "" {
 		req.Strategy = "newest"
 	}

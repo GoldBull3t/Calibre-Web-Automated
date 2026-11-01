@@ -6,6 +6,7 @@
   export let searchQuery = '';
   export let mamStatus = null;
   export let theme = 'dark';
+  export let currentUser = null;
 
   const dispatch = createEventDispatcher();
 
@@ -173,6 +174,24 @@
           <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
           <span>Instalar App</span>
         </button>
+      {/if}
+
+      <!-- User Profile / Logout -->
+      {#if currentUser && currentUser.authenticated}
+        <div class="user-pill" title="Utilizador: {currentUser.name}">
+          <a href="/me" class="user-link">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
+            <span class="user-name">{currentUser.name}</span>
+          </a>
+          <a href="/logout" class="logout-btn" title="Terminar Sessão">
+            <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+          </a>
+        </div>
+      {:else}
+        <a href="/login" class="login-btn" title="Iniciar Sessão">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+          <span>Entrar</span>
+        </a>
       {/if}
 
       <!-- Theme Switcher -->
@@ -555,5 +574,75 @@
     .palette-quick-btn .cmd-k-kbd {
       display: none;
     }
+  }
+  .user-pill {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-primary, rgba(255, 255, 255, 0.1));
+    border-radius: var(--radius-full, 9999px);
+    overflow: hidden;
+    height: 32px;
+  }
+
+  .user-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 0 10px;
+    color: var(--text-primary, #ffffff);
+    text-decoration: none;
+    font-size: 11px;
+    font-weight: 600;
+    transition: background 0.15s ease;
+  }
+
+  .user-link:hover {
+    background: rgba(255, 255, 255, 0.08);
+  }
+
+  .user-name {
+    max-width: 90px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .logout-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0 8px;
+    height: 100%;
+    color: var(--text-muted, #8b949e);
+    border-left: 1px solid var(--border-primary, rgba(255, 255, 255, 0.1));
+    transition: all 0.15s ease;
+    text-decoration: none;
+  }
+
+  .logout-btn:hover {
+    color: #ef4444;
+    background: rgba(239, 68, 68, 0.15);
+  }
+
+  .login-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 12px;
+    background: rgba(99, 102, 241, 0.15);
+    border: 1px solid rgba(99, 102, 241, 0.3);
+    border-radius: var(--radius-full, 9999px);
+    color: #a5b4fc;
+    font-size: 11px;
+    font-weight: 600;
+    text-decoration: none;
+    transition: all 0.15s ease;
+  }
+
+  .login-btn:hover {
+    background: rgba(99, 102, 241, 0.3);
+    color: #ffffff;
+    border-color: #6366f1;
   }
 </style>

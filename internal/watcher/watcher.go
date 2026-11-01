@@ -6,7 +6,9 @@ import (
 	"fmt"
 	"io"
 	"log"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -19,6 +21,34 @@ import (
 	"github.com/fsnotify/fsnotify"
 	"github.com/google/uuid"
 )
+
+var coverClient = &http.Client{
+	Timeout: 10 * time.Second,
+}
+
+func isSafeCoverURL(rawURL string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	if u.Scheme != "http" && u.Scheme != "https" {
+		return false
+	}
+	host := u.Hostname()
+	if host == "localhost" || strings.EqualFold(host, "localhost.localdomain") {
+		return false
+	}
+	ip := net.ParseIP(host)
+	if ip != nil {
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+			return false
+		}
+		if ip.String() == "169.254.169.254" {
+			return false
+		}
+	}
+	return true
+}
 
 var supportedExtensions = map[string]bool{
 	".epub": true,
@@ -305,9 +335,9 @@ func (w *Watcher) processFile(srcPath string) error {
 					if needDesc && first.Description != "" {
 						_, _ = txW.Exec("INSERT OR REPLACE INTO comments (book, text) VALUES (?, ?)", bID, first.Description)
 					}
-					if needCover && first.Cover != "" {
-						if resp, err := http.Get(first.Cover); err == nil && resp.StatusCode == 200 {
-							cBytes, _ := io.ReadAll(resp.Body)
+					if needCover && first.Cover != "" && isSafeCoverURL(first.Cover) {
+						if resp, err := coverClient.Get(first.Cover); err == nil && resp.StatusCode == 200 {
+							cBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
 							resp.Body.Close()
 							if len(cBytes) > 0 {
 								cPath := filepath.Join(targetDir, "cover.jpg")

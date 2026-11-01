@@ -12,6 +12,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/crocodilestick/calibre-web-go/internal/auth"
 	"github.com/crocodilestick/calibre-web-go/internal/backup"
 	"github.com/crocodilestick/calibre-web-go/internal/database"
 )
@@ -290,6 +291,11 @@ func (h *Handler) MAMDownload(w http.ResponseWriter, r *http.Request) {
 
 // PluginsList devolve a lista de plugins Calibre instalados.
 func (h *Handler) PluginsList(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleAdmin) {
+		http.Error(w, `{"error":"Acesso reservado ao Administrador"}`, http.StatusForbidden)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	if h.pluginMgr == nil {
 		_ = json.NewEncoder(w).Encode(map[string]any{
@@ -305,6 +311,11 @@ func (h *Handler) PluginsList(w http.ResponseWriter, r *http.Request) {
 
 // PluginsUpload recebe e instala um plugin Calibre em ficheiro .zip.
 func (h *Handler) PluginsUpload(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleAdmin) {
+		http.Error(w, `{"error":"Acesso reservado ao Administrador"}`, http.StatusForbidden)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	file, header, err := r.FormFile("plugin_file")
 	if err != nil {
@@ -333,6 +344,11 @@ func (h *Handler) PluginsUpload(w http.ResponseWriter, r *http.Request) {
 
 // PluginsToggle ativa ou desativa um plugin Calibre.
 func (h *Handler) PluginsToggle(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleAdmin) {
+		http.Error(w, `{"error":"Acesso reservado ao Administrador"}`, http.StatusForbidden)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	filename := r.PathValue("filename")
 	if filename == "" {
@@ -604,6 +620,19 @@ func (h *Handler) APIBatchBooks(w http.ResponseWriter, r *http.Request) {
 		userID = u.ID
 	}
 
+	u := h.CurrentUser(r)
+	if req.Action == "delete" {
+		if !auth.HasPermission(u, auth.RoleDeleteBooks) {
+			http.Error(w, `{"error":"Sem permissão para eliminar livros"}`, http.StatusForbidden)
+			return
+		}
+	} else {
+		if u == nil {
+			http.Error(w, `{"error":"Autenticação necessária"}`, http.StatusUnauthorized)
+			return
+		}
+	}
+
 	switch req.Action {
 	case "mark_read":
 		_ = h.db.BulkSetReadStatus(r.Context(), userID, req.BookIDs, true)
@@ -615,7 +644,12 @@ func (h *Handler) APIBatchBooks(w http.ResponseWriter, r *http.Request) {
 		_ = h.db.BulkSetArchived(r.Context(), userID, req.BookIDs, false)
 	case "delete":
 		for _, bid := range req.BookIDs {
+			book, _ := h.db.GetBookByID(r.Context(), bid)
 			_ = h.db.DeleteBook(r.Context(), bid)
+			if book != nil && book.Path != "" {
+				fullPath := filepath.Join(h.booksDir, filepath.FromSlash(book.Path))
+				_ = os.RemoveAll(fullPath)
+			}
 		}
 	case "add_to_shelf":
 		if req.ShelfID > 0 {
@@ -636,6 +670,11 @@ func (h *Handler) APIBatchBooks(w http.ResponseWriter, r *http.Request) {
 // APIEditBook atualiza os metadados de um livro.
 func (h *Handler) APIEditBook(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleEdit) {
+		http.Error(w, `{"error":"Sem permissão para editar livros"}`, http.StatusForbidden)
+		return
+	}
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil || id <= 0 {
@@ -673,10 +712,10 @@ func (h *Handler) APIGetDuplicates(w http.ResponseWriter, r *http.Request) {
 	})
 }
 
-// APIGetCWASettings devolve o estado dos serviços de automação do CWA.
+// APIGetCWASettings devolve o estado dos serviços de automação do CWA a partir da configuração persistida.
 func (h *Handler) APIGetCWASettings(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
-	_ = json.NewEncoder(w).Encode(map[string]any{
+	defaults := map[string]any{
 		"ingest_active":     true,
 		"ingest_path":       h.ingestDir,
 		"converter_active":  true,
@@ -690,20 +729,56 @@ func (h *Handler) APIGetCWASettings(w http.ResponseWriter, r *http.Request) {
 		"target_format":     "EPUB",
 		"metadata_path":     h.libraryDir,
 		"books_path":        h.booksDir,
-	})
+	}
+
+	cfgFile := filepath.Join(h.libraryDir, "cwa_settings.json")
+	if data, err := os.ReadFile(cfgFile); err == nil {
+		var saved map[string]any
+		if json.Unmarshal(data, &saved) == nil {
+			for k, v := range saved {
+				defaults[k] = v
+			}
+		}
+	}
+	_ = json.NewEncoder(w).Encode(defaults)
 }
 
-// APISaveCWASettings guarda as configurações de automação.
+// APISaveCWASettings guarda as configurações de automação persistindo em cwa_settings.json.
 func (h *Handler) APISaveCWASettings(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleAdmin) {
+		http.Error(w, `{"error":"Acesso reservado ao Administrador"}`, http.StatusForbidden)
+		return
+	}
+
+	var body map[string]any
+	if err := json.NewDecoder(r.Body).Decode(&body); err != nil {
+		http.Error(w, `{"error":"JSON inválido"}`, http.StatusBadRequest)
+		return
+	}
+
+	cfgFile := filepath.Join(h.libraryDir, "cwa_settings.json")
+	data, err := json.MarshalIndent(body, "", "  ")
+	if err != nil {
+		http.Error(w, `{"error":"Falha ao serializar configurações"}`, http.StatusInternalServerError)
+		return
+	}
+	_ = os.WriteFile(cfgFile, data, 0644)
+
 	_ = json.NewEncoder(w).Encode(map[string]any{
 		"status":  "success",
-		"message": "Definições CWA atualizadas com sucesso.",
+		"message": "Definições CWA atualizadas e guardadas com sucesso.",
 	})
 }
 
 // APIGetBackups devolve a lista de backups.
 func (h *Handler) APIGetBackups(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleAdmin) {
+		http.Error(w, `{"error":"Acesso reservado ao Administrador"}`, http.StatusForbidden)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	backupDir := filepath.Join(h.libraryDir, "backups")
 	backups, err := backup.ListBackups(backupDir)
@@ -718,6 +793,11 @@ func (h *Handler) APIGetBackups(w http.ResponseWriter, r *http.Request) {
 
 // APICreateBackup cria um novo backup comprimido.
 func (h *Handler) APICreateBackup(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleAdmin) {
+		http.Error(w, `{"error":"Acesso reservado ao Administrador"}`, http.StatusForbidden)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	backupDir := filepath.Join(h.libraryDir, "backups")
 	name, err := backup.CreateBackup(h.libraryDir, backupDir)
@@ -734,6 +814,11 @@ func (h *Handler) APICreateBackup(w http.ResponseWriter, r *http.Request) {
 
 // APIDeleteBackup apaga um backup.
 func (h *Handler) APIDeleteBackup(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleAdmin) {
+		http.Error(w, `{"error":"Acesso reservado ao Administrador"}`, http.StatusForbidden)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	filename := r.PathValue("filename")
 	cleanName := filepath.Base(filename)

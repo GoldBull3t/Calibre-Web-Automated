@@ -8,12 +8,18 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/crocodilestick/calibre-web-go/internal/auth"
 	"github.com/crocodilestick/calibre-web-go/internal/backup"
 	"github.com/flosch/pongo2/v6"
 )
 
 // CWABackupList devolve a lista de backups disponíveis em HTML ou JSON.
 func (h *Handler) CWABackupList(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleAdmin) {
+		http.Error(w, "Acesso reservado ao Administrador", http.StatusForbidden)
+		return
+	}
 	backupDir := filepath.Join(h.libraryDir, "backups")
 	backups, err := backup.ListBackups(backupDir)
 	if err != nil {
@@ -36,6 +42,11 @@ func (h *Handler) CWABackupList(w http.ResponseWriter, r *http.Request) {
 
 // CWABackupCreate aciona a criação imediata de um snapshot de backup compactado (.zip).
 func (h *Handler) CWABackupCreate(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleAdmin) {
+		http.Error(w, "Acesso reservado ao Administrador", http.StatusForbidden)
+		return
+	}
 	backupDir := filepath.Join(h.libraryDir, "backups")
 	name, err := backup.CreateBackup(h.libraryDir, backupDir)
 	if err != nil {
@@ -58,6 +69,11 @@ func (h *Handler) CWABackupCreate(w http.ResponseWriter, r *http.Request) {
 
 // CWABackupDownload transfere o ficheiro de backup por streaming.
 func (h *Handler) CWABackupDownload(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleAdmin) {
+		http.Error(w, "Acesso reservado ao Administrador", http.StatusForbidden)
+		return
+	}
 	filename := r.PathValue("filename")
 	if filename == "" {
 		filename = filepath.Base(r.URL.Path)
@@ -83,6 +99,11 @@ func (h *Handler) CWABackupDownload(w http.ResponseWriter, r *http.Request) {
 
 // CWABackupDelete apaga um backup específico.
 func (h *Handler) CWABackupDelete(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleAdmin) {
+		http.Error(w, "Acesso reservado ao Administrador", http.StatusForbidden)
+		return
+	}
 	filename := r.PathValue("filename")
 	cleanName := filepath.Base(filename)
 	backupPath := filepath.Join(h.libraryDir, "backups", cleanName)

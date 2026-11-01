@@ -5,13 +5,16 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strconv"
 	"strings"
 	"time"
 
+	"github.com/crocodilestick/calibre-web-go/internal/auth"
 	"github.com/crocodilestick/calibre-web-go/internal/database"
 	"github.com/crocodilestick/calibre-web-go/internal/events"
 	"github.com/crocodilestick/calibre-web-go/internal/metadata"
@@ -69,6 +72,11 @@ type EnrichApplyPayload struct {
 // APIEnrichApply aplica a capa HD selecionada e atualiza os metadados escolhidos.
 func (h *Handler) APIEnrichApply(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleEdit) {
+		http.Error(w, `{"error":"Sem permissão para alterar metadados"}`, http.StatusForbidden)
+		return
+	}
 
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -165,6 +173,11 @@ func (h *Handler) APIEnrichApply(w http.ResponseWriter, r *http.Request) {
 // APIEnrichAuto executa o enriquecimento automático inteligente em 1 clique.
 func (h *Handler) APIEnrichAuto(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleEdit) {
+		http.Error(w, `{"error":"Sem permissão para alterar metadados"}`, http.StatusForbidden)
+		return
+	}
 
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
@@ -273,6 +286,11 @@ func (h *Handler) APIEnrichAuto(w http.ResponseWriter, r *http.Request) {
 // APICleanLibraryMetadata sanitiza autores, títulos e comentários de toda a biblioteca.
 func (h *Handler) APICleanLibraryMetadata(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleAdmin) {
+		http.Error(w, `{"error":"Acesso reservado ao Administrador"}`, http.StatusForbidden)
+		return
+	}
 
 	res, err := h.db.ListBooks(r.Context(), database.BookFilter{Page: 1, PageSize: 10000})
 	if err != nil {
@@ -339,8 +357,33 @@ func (h *Handler) APICleanLibraryMetadata(w http.ResponseWriter, r *http.Request
 	})
 }
 
-// downloadAndSaveCover faz o download da imagem e guarda como cover.jpg no livro.
+func isSafeCoverURL(rawURL string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil || (u.Scheme != "http" && u.Scheme != "https") {
+		return false
+	}
+	hostname := strings.ToLower(u.Hostname())
+	if hostname == "localhost" || strings.HasSuffix(hostname, ".local") {
+		return false
+	}
+	ips, err := net.LookupIP(hostname)
+	if err != nil {
+		return false
+	}
+	for _, ip := range ips {
+		if ip.IsLoopback() || ip.IsPrivate() || ip.IsLinkLocalUnicast() || ip.IsLinkLocalMulticast() || ip.IsUnspecified() {
+			return false
+		}
+	}
+	return true
+}
+
+// downloadAndSaveCover faz o download da imagem com proteção SSRF e guarda como cover.jpg no livro.
 func (h *Handler) downloadAndSaveCover(ctx context.Context, bookID int64, bookRelPath, coverURL string) error {
+	if !isSafeCoverURL(coverURL) {
+		return fmt.Errorf("URL rejeitado por motivos de segurança (SSRF protection)")
+	}
+
 	client := &http.Client{Timeout: 12 * time.Second}
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, coverURL, nil)
 	if err != nil {

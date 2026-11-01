@@ -11,6 +11,7 @@ import (
 	"strconv"
 	"strings"
 
+	"github.com/crocodilestick/calibre-web-go/internal/auth"
 	"github.com/crocodilestick/calibre-web-go/internal/database"
 	"github.com/crocodilestick/calibre-web-go/internal/events"
 	"github.com/crocodilestick/calibre-web-go/internal/formats"
@@ -73,6 +74,11 @@ func (h *Handler) GetCover(w http.ResponseWriter, r *http.Request) {
 
 // UploadCover permite atualizar a capa de um livro (suporta multipart form e raw binary image).
 func (h *Handler) UploadCover(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleEdit) {
+		http.Error(w, `{"error":"Sem permissão para alterar capas"}`, http.StatusForbidden)
+		return
+	}
 	if r.Method != http.MethodPost {
 		http.Error(w, `{"error":"Método não permitido"}`, http.StatusMethodNotAllowed)
 		return
@@ -215,6 +221,12 @@ func (h *Handler) serveDefaultCover(w http.ResponseWriter, r *http.Request) {
 
 // DownloadBook entrega o ficheiro com suporte completo a HTTP Range Requests (206 Partial Content).
 func (h *Handler) DownloadBook(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleDownload) {
+		http.Error(w, "Sem permissão para transferir livros", http.StatusForbidden)
+		return
+	}
+
 	idStr := r.PathValue("id")
 	if idStr == "" {
 		parts := strings.Split(r.URL.Path, "/")
@@ -398,6 +410,12 @@ func (h *Handler) ReaderWeb(w http.ResponseWriter, r *http.Request) {
 
 // UploadBook processa o envio de ficheiros e copia diretamente para ingestDir.
 func (h *Handler) UploadBook(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleUpload) {
+		http.Error(w, "Sem permissão para carregar livros", http.StatusForbidden)
+		return
+	}
+
 	if err := r.ParseMultipartForm(100 * 1024 * 1024); err != nil {
 		http.Error(w, "Upload failed: "+err.Error(), http.StatusBadRequest)
 		return
@@ -412,19 +430,25 @@ func (h *Handler) UploadBook(w http.ResponseWriter, r *http.Request) {
 	}
 
 	for _, fh := range fileHeaders {
+		cleanName := filepath.Base(fh.Filename)
+		if cleanName == "" || cleanName == "." || cleanName == ".." {
+			continue
+		}
+
 		src, err := fh.Open()
 		if err != nil {
 			continue
 		}
-		defer src.Close()
 
-		dstPath := filepath.Join(h.ingestDir, fh.Filename)
+		dstPath := filepath.Join(h.ingestDir, cleanName)
 		dst, err := os.Create(dstPath)
 		if err != nil {
+			src.Close()
 			continue
 		}
 		_, _ = io.Copy(dst, src)
 		dst.Close()
+		src.Close()
 	}
 
 	if r.Header.Get("X-Requested-With") == "XMLHttpRequest" {
@@ -438,6 +462,12 @@ func (h *Handler) UploadBook(w http.ResponseWriter, r *http.Request) {
 
 // DeleteBook remove o livro do banco e da biblioteca física.
 func (h *Handler) DeleteBook(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleDeleteBooks) {
+		http.Error(w, "Sem permissão para eliminar livros", http.StatusForbidden)
+		return
+	}
+
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -698,6 +728,12 @@ func (h *Handler) EditBook(w http.ResponseWriter, r *http.Request) {
 
 // DeleteBookFormat remove um formato de ficheiro do livro.
 func (h *Handler) DeleteBookFormat(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleDeleteBooks) {
+		http.Error(w, "Sem permissão para eliminar formatos", http.StatusForbidden)
+		return
+	}
+
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -711,7 +747,17 @@ func (h *Handler) DeleteBookFormat(w http.ResponseWriter, r *http.Request) {
 	if format != "" {
 		_ = h.db.DeleteBookFormat(r.Context(), id, format)
 		if book != nil && book.Path != "" {
-			fileName := fmt.Sprintf("%s.%s", book.Title, strings.ToLower(format))
+			formatName := ""
+			for _, f := range book.Formats {
+				if strings.EqualFold(f.Format, format) {
+					formatName = f.Name
+					break
+				}
+			}
+			if formatName == "" {
+				formatName = book.Title
+			}
+			fileName := fmt.Sprintf("%s.%s", formatName, strings.ToLower(format))
 			fullPath := filepath.Join(h.booksDir, filepath.FromSlash(book.Path), fileName)
 			_ = os.Remove(fullPath)
 		}
@@ -795,9 +841,20 @@ func (h *Handler) SendBook(w http.ResponseWriter, r *http.Request) {
 	fileName := fmt.Sprintf("%s.%s", selectedFormat.Name, strings.ToLower(selectedFormat.Format))
 	fullPath := filepath.Join(h.booksDir, filepath.FromSlash(book.Path), fileName)
 
-	// EPUB Fixer 2.0: repara automaticamente estruturas inválidas antes do envio
+	// EPUB Fixer 2.0: repara automaticamente cópia temporária antes do envio (sem alterar o mestre)
+	fileToSend := fullPath
 	if strings.EqualFold(selectedFormat.Format, "EPUB") {
-		_, _ = formats.FixEPUB(fullPath)
+		if tmpFile, errTmp := os.CreateTemp("", "cwa-send-*.epub"); errTmp == nil {
+			tmpPath := tmpFile.Name()
+			_ = tmpFile.Close()
+			if inData, errR := os.ReadFile(fullPath); errR == nil {
+				if errW := os.WriteFile(tmpPath, inData, 0644); errW == nil {
+					_, _ = formats.FixEPUB(tmpPath)
+					fileToSend = tmpPath
+					defer os.Remove(tmpPath)
+				}
+			}
+		}
 	}
 
 	smtpSettings, err := h.db.GetSMTPSettings(r.Context())
@@ -817,7 +874,7 @@ func (h *Handler) SendBook(w http.ResponseWriter, r *http.Request) {
 		Login:    smtpSettings.Login,
 		Password: smtpSettings.Password,
 		From:     smtpSettings.From,
-	}, recipient, book.Title, fullPath, fileName)
+	}, recipient, book.Title, fileToSend, fileName)
 
 	w.Header().Set("Content-Type", "application/json")
 	if err != nil {
@@ -862,6 +919,12 @@ func (h *Handler) ConvertBook(w http.ResponseWriter, r *http.Request) {
 		targetFormat = "kepub"
 	}
 	targetFormat = strings.ToLower(strings.TrimPrefix(targetFormat, "."))
+	allowedFormats := map[string]bool{"epub": true, "kepub": true, "mobi": true, "azw3": true, "pdf": true, "txt": true}
+	if !allowedFormats[targetFormat] {
+		w.WriteHeader(http.StatusBadRequest)
+		_ = json.NewEncoder(w).Encode(map[string]any{"status": "error", "message": "Formato de destino não suportado"})
+		return
+	}
 
 	// Localiza o formato fonte disponível (preferência por EPUB)
 	var sourceFormat database.DataFormat
@@ -985,6 +1048,12 @@ func (h *Handler) ArchiveSelectedBooks(w http.ResponseWriter, r *http.Request) {
 
 // DeleteSelectedBooks remove os livros selecionados em lote do banco e disco.
 func (h *Handler) DeleteSelectedBooks(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleDeleteBooks) {
+		http.Error(w, `{"error":"Sem permissão para eliminar livros"}`, http.StatusForbidden)
+		return
+	}
+
 	var payload struct {
 		Selections []int64 `json:"selections"`
 	}
@@ -1050,6 +1119,11 @@ func (h *Handler) ReadSelectedBooks(w http.ResponseWriter, r *http.Request) {
 
 // EditSelectedBooks edita metadados em lote dos livros selecionados.
 func (h *Handler) EditSelectedBooks(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleEdit) {
+		http.Error(w, `{"error":"Sem permissão para editar livros"}`, http.StatusForbidden)
+		return
+	}
 	_ = r.ParseForm()
 	tagsStr := strings.TrimSpace(r.FormValue("add_tag"))
 	var tags []string
@@ -1088,6 +1162,11 @@ func (h *Handler) EditSelectedBooks(w http.ResponseWriter, r *http.Request) {
 
 // MergeBooks funde múltiplos livros num único registo com todos os formatos.
 func (h *Handler) MergeBooks(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleEdit) {
+		http.Error(w, `{"error":"Sem permissão para mesclar livros"}`, http.StatusForbidden)
+		return
+	}
 	var payload struct {
 		MergeBooks []int64 `json:"Merge_books"`
 	}

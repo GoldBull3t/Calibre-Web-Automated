@@ -169,11 +169,11 @@ self.addEventListener('message', async event => {
       const readerURL = `/read/${bookId}`;
       const coverURL = `/cover/${bookId}`;
 
-      // Descarrega os 3 recursos em paralelo
+      // Descarrega os 3 recursos em paralelo (apenas status 200 para evitar erro de Cache API com 206 Partial Content)
       await Promise.all([
-        fetch(epubURL).then(res => { if (res.ok) bookCache.put(epubURL, res); }),
-        fetch(readerURL).then(res => { if (res.ok) bookCache.put(readerURL, res); }),
-        fetch(coverURL).then(res => { if (res.ok) coverCache.put(coverURL, res); })
+        fetch(epubURL).then(res => { if (res.ok && res.status === 200) bookCache.put(epubURL, res); }),
+        fetch(readerURL).then(res => { if (res.ok && res.status === 200) bookCache.put(readerURL, res); }),
+        fetch(coverURL).then(res => { if (res.ok && res.status === 200) coverCache.put(coverURL, res); })
       ]);
 
       if (event.source) {

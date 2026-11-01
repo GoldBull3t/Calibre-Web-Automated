@@ -47,7 +47,7 @@
       alt={book.title} 
       loading="lazy" 
       class="cover-img"
-      on:error={(e) => { e.target.src = '/static/images/cover_placeholder.svg'; }}
+      on:error={(e) => { e.target.src = '/static/generic_cover.svg'; }}
     />
 
     <!-- Multi-select checkbox -->

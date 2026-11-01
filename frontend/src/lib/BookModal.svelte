@@ -3,6 +3,7 @@
   import { onMount, createEventDispatcher } from 'svelte';
   import { toast } from './toast.js';
   import { offlineBookIds, saveBookOffline, removeBookOffline } from './pwa.js';
+  import { sanitizeHtml } from './sanitize.js';
   export let bookId;
 
   const dispatch = createEventDispatcher();
@@ -369,7 +370,7 @@
               src="/cover/{book.id}?t={coverTimestamp}" 
               alt={book.title} 
               class="modal-cover-img"
-              on:error={(e) => { e.target.src = '/static/images/cover_placeholder.svg'; }}
+              on:error={(e) => { e.target.src = '/static/generic_cover.svg'; }}
             />
 
             <!-- Subtle hover action pill to replace cover -->
@@ -614,7 +615,7 @@
               <span class="card-caption">Sinopse</span>
               <div class="synopsis-content">
                 {#if book.comment}
-                  {@html book.comment}
+                  {@html sanitizeHtml(book.comment)}
                 {:else}
                   <p class="synopsis-empty">Sem descrição ou sinopse registada para esta obra.</p>
                 {/if}

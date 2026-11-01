@@ -8,6 +8,7 @@ import (
 	"io"
 	"os"
 	"path"
+	"net/url"
 	"path/filepath"
 	"strings"
 )
@@ -179,6 +180,9 @@ func ExtractMetadata(epubPath string) (*Metadata, error) {
 	}
 
 	if coverHref != "" {
+		if unescaped, err := url.PathUnescape(coverHref); err == nil {
+			coverHref = unescaped
+		}
 		resolvedCoverPath := coverHref
 		if meta.OpfDir != "." && meta.OpfDir != "" {
 			resolvedCoverPath = path.Join(meta.OpfDir, coverHref)
@@ -206,8 +210,10 @@ func ExtractCover(epubPath string, w io.Writer) error {
 	defer zr.Close()
 
 	var targetZipFile *zip.File
+	targetLower := strings.ToLower(filepath.ToSlash(meta.CoverItemID))
 	for _, f := range zr.File {
-		if f.Name == meta.CoverItemID || strings.HasSuffix(f.Name, meta.CoverItemID) {
+		nameLower := strings.ToLower(filepath.ToSlash(f.Name))
+		if nameLower == targetLower || strings.HasSuffix(nameLower, "/" + targetLower) || strings.HasSuffix(nameLower, targetLower) {
 			targetZipFile = f
 			break
 		}

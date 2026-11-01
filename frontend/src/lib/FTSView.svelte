@@ -1,6 +1,7 @@
 <script>
   // @ts-nocheck
   import { createEventDispatcher } from 'svelte';
+  import { sanitizeSnippet } from './sanitize.js';
   const dispatch = createEventDispatcher();
 
   let query = '';
@@ -126,7 +127,7 @@
               <!-- Context Snippet with <mark> tags -->
               <div class="snippet-box">
                 <span class="quote-icon">“</span>
-                <span class="snippet-text">{@html r.snippet}</span>
+                <span class="snippet-text">{@html sanitizeSnippet(r.snippet)}</span>
                 <span class="quote-icon">”</span>
               </div>
             </div>

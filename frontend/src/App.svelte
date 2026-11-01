@@ -16,9 +16,18 @@
   import { toast } from './lib/toast.js';
   import CommandPalette from './lib/CommandPalette.svelte';
 
-  let activeTab = 'library';
+  const VALID_TABS = ['library', 'browse', 'shelves', 'fts', 'mam', 'duplicates', 'cwa_settings', 'plugins', 'stats'];
+
+  function getTabFromHash() {
+    if (typeof window === 'undefined') return 'library';
+    const h = window.location.hash.replace(/^#\/?/, '').trim();
+    return VALID_TABS.includes(h) ? h : 'library';
+  }
+
+  let activeTab = getTabFromHash();
   let searchQuery = '';
   let theme = localStorage.getItem('cwa_theme') || 'dark';
+  let currentUser = null;
 
   // Command Palette & SSE state
   let showCommandPalette = false;
@@ -55,15 +64,38 @@
     theme = theme === 'dark' ? 'light' : 'dark';
   }
 
+  function onHashChange() {
+    const tab = getTabFromHash();
+    if (tab !== activeTab) {
+      activeTab = tab;
+    }
+  }
+
+  async function fetchCurrentUser() {
+    try {
+      const res = await fetch('/api/me');
+      if (res.ok) {
+        currentUser = await res.json();
+      }
+    } catch (e) {
+      console.warn('Utilizador não autenticado ou modo anónimo:', e);
+    }
+  }
+
   onMount(async () => {
+    window.addEventListener('hashchange', onHashChange);
     await Promise.all([
       fetchBooks(),
-      fetchMAMStatus()
+      fetchMAMStatus(),
+      fetchCurrentUser()
     ]);
     initSSE();
   });
 
   onDestroy(() => {
+    if (typeof window !== 'undefined') {
+      window.removeEventListener('hashchange', onHashChange);
+    }
     if (sseSource) {
       sseSource.close();
     }
@@ -170,6 +202,9 @@
 
   function handleNavigate(event) {
     activeTab = event.detail.tab;
+    if (typeof window !== 'undefined' && window.location.hash !== `#${activeTab}`) {
+      window.location.hash = `#${activeTab}`;
+    }
     window.scrollTo({ top: 0, behavior: 'smooth' });
   }
 
@@ -305,6 +340,7 @@
     {searchQuery} 
     {mamStatus} 
     {theme}
+    {currentUser}
     on:navigate={handleNavigate}
     on:search={handleSearch}
     on:toggleTheme={toggleTheme}

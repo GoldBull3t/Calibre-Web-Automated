@@ -377,6 +377,7 @@ func main() {
 	mux.HandleFunc("POST /api/books/{id}/cover", h.UploadCover)
 	mux.HandleFunc("GET /api/reader/progress/{id}", h.ReaderGetProgress)
 	mux.HandleFunc("POST /api/reader/progress/{id}", h.ReaderSaveProgress)
+	mux.HandleFunc("GET /api/me", h.APICurrentUser)
 	mux.HandleFunc("GET /api/books", h.APIGetBooks)
 	mux.HandleFunc("GET /api/books/{id}", h.APIGetBook)
 	mux.HandleFunc("GET /api/stats/overview", h.APIStatsOverview)

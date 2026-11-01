@@ -41,7 +41,8 @@ func (h *Handler) APIPasskeyRegisterOptions(w http.ResponseWriter, r *http.Reque
 
 	u := h.CurrentUser(r)
 	if u == nil {
-		u = &database.User{ID: 1, Name: "admin"}
+		http.Error(w, `{"error":"Autenticação necessária"}`, http.StatusUnauthorized)
+		return
 	}
 
 	challenge, err := auth.GenerateWebAuthnChallenge()
@@ -66,7 +67,8 @@ func (h *Handler) APIPasskeyRegisterVerify(w http.ResponseWriter, r *http.Reques
 
 	u := h.CurrentUser(r)
 	if u == nil {
-		u = &database.User{ID: 1, Name: "admin"}
+		http.Error(w, `{"error":"Autenticação necessária"}`, http.StatusUnauthorized)
+		return
 	}
 
 	var req struct {
@@ -152,11 +154,19 @@ func (h *Handler) APIPasskeyLoginVerify(w http.ResponseWriter, r *http.Request) 
 	_ = h.db.CreateUserSession(r.Context(), user.ID, sessionKey)
 
 	http.SetCookie(w, &http.Cookie{
+		Name:     "session",
+		Value:    sessionKey,
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   86400 * 30,
+		SameSite: http.SameSiteLaxMode,
+	})
+	http.SetCookie(w, &http.Cookie{
 		Name:     "session_key",
 		Value:    sessionKey,
 		Path:     "/",
 		HttpOnly: true,
-		MaxAge:   86400 * 30, // 30 dias
+		MaxAge:   86400 * 30,
 		SameSite: http.SameSiteLaxMode,
 	})
 
@@ -175,10 +185,11 @@ func (h *Handler) APIPasskeyLoginVerify(w http.ResponseWriter, r *http.Request) 
 func (h *Handler) APIListPasskeys(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	u := h.CurrentUser(r)
-	userID := int64(1)
-	if u != nil {
-		userID = u.ID
+	if u == nil {
+		http.Error(w, `{"error":"Autenticação necessária"}`, http.StatusUnauthorized)
+		return
 	}
+	userID := u.ID
 
 	list, err := h.db.ListPasskeys(r.Context(), userID)
 	if err != nil {
@@ -197,10 +208,11 @@ func (h *Handler) APIDeletePasskey(w http.ResponseWriter, r *http.Request) {
 	id, _ := strconv.ParseInt(idStr, 10, 64)
 
 	u := h.CurrentUser(r)
-	userID := int64(1)
-	if u != nil {
-		userID = u.ID
+	if u == nil {
+		http.Error(w, `{"error":"Autenticação necessária"}`, http.StatusUnauthorized)
+		return
 	}
+	userID := u.ID
 
 	_ = h.db.DeletePasskey(r.Context(), userID, id)
 	_ = json.NewEncoder(w).Encode(map[string]any{"status": "success"})
@@ -208,6 +220,11 @@ func (h *Handler) APIDeletePasskey(w http.ResponseWriter, r *http.Request) {
 
 // APIGetOIDCConfig devolve a configuração atual de SSO / OIDC.
 func (h *Handler) APIGetOIDCConfig(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleAdmin) {
+		http.Error(w, `{"error":"Acesso reservado ao Administrador"}`, http.StatusForbidden)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	cfg, err := h.db.GetOIDCConfig(r.Context())
 	if err != nil || cfg == nil {
@@ -233,6 +250,11 @@ func (h *Handler) APIGetOIDCConfig(w http.ResponseWriter, r *http.Request) {
 
 // APISaveOIDCConfig guarda novas definições de SSO / OIDC.
 func (h *Handler) APISaveOIDCConfig(w http.ResponseWriter, r *http.Request) {
+	u := h.CurrentUser(r)
+	if !auth.HasPermission(u, auth.RoleAdmin) {
+		http.Error(w, `{"error":"Acesso reservado ao Administrador"}`, http.StatusForbidden)
+		return
+	}
 	w.Header().Set("Content-Type", "application/json")
 	var req database.OIDCConfig
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -267,27 +289,57 @@ func (h *Handler) OIDCLogin(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	stateToken, _ := auth.GenerateSessionKey()
+	http.SetCookie(w, &http.Cookie{
+		Name:     "cwa_oidc_state",
+		Value:    stateToken,
+		Path:     "/",
+		HttpOnly: true,
+		MaxAge:   600,
+		SameSite: http.SameSiteLaxMode,
+	})
+
 	authURL := fmt.Sprintf("%s/protocol/openid-connect/auth?client_id=%s&redirect_uri=%s&response_type=code&scope=openid+profile+email&state=%s",
 		strings.TrimSuffix(cfg.IssuerURL, "/"),
 		cfg.ClientID,
 		cfg.RedirectURL,
-		"cwa_auth_state",
+		stateToken,
 	)
 	http.Redirect(w, r, authURL, http.StatusFound)
 }
 
 // OIDCCallback recebe o código de autorização do fornecedor OIDC e inicia sessão.
 func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
+	state := r.URL.Query().Get("state")
+	stateCookie, sErr := r.Cookie("cwa_oidc_state")
+	if sErr != nil || stateCookie.Value == "" || stateCookie.Value != state {
+		http.Error(w, "Validação de estado OIDC falhou (CSRF protection)", http.StatusBadRequest)
+		return
+	}
+
 	code := r.URL.Query().Get("code")
 	if code == "" {
 		http.Error(w, "Código de autorização OIDC ausente", http.StatusBadRequest)
 		return
 	}
 
-	// Login como utilizador admin/sso e redireciona para a raiz
+	// Busca usuário admin ou usuário padrão SSO
+	var targetUID int64 = 1
+	if u, err := h.db.GetUserByName(r.Context(), "admin"); err == nil && u != nil {
+		targetUID = u.ID
+	}
+
 	sessionKey, err := auth.GenerateSessionKey()
 	if err == nil {
-		_ = h.db.CreateUserSession(r.Context(), 1, sessionKey)
+		_ = h.db.CreateUserSession(r.Context(), targetUID, sessionKey)
+		http.SetCookie(w, &http.Cookie{
+			Name:     "session",
+			Value:    sessionKey,
+			Path:     "/",
+			HttpOnly: true,
+			MaxAge:   86400 * 30,
+			SameSite: http.SameSiteLaxMode,
+		})
 		http.SetCookie(w, &http.Cookie{
 			Name:     "session_key",
 			Value:    sessionKey,
@@ -298,4 +350,23 @@ func (h *Handler) OIDCCallback(w http.ResponseWriter, r *http.Request) {
 		})
 	}
 	http.Redirect(w, r, "/", http.StatusFound)
+}
+
+// APICurrentUser retorna os dados do utilizador autenticado no formato JSON
+func (h *Handler) APICurrentUser(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("Content-Type", "application/json")
+	u := h.CurrentUser(r)
+	if u == nil {
+		w.WriteHeader(http.StatusUnauthorized)
+		_ = json.NewEncoder(w).Encode(map[string]any{"authenticated": false})
+		return
+	}
+	_ = json.NewEncoder(w).Encode(map[string]any{
+		"authenticated": true,
+		"id":            u.ID,
+		"name":          u.Name,
+		"email":         u.Email,
+		"role":          u.Role,
+		"is_admin":      u.IsAdmin || auth.HasPermission(u, auth.RoleAdmin),
+	})
 }

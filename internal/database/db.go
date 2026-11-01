@@ -2034,7 +2034,7 @@ func (d *DB) MergeBookRecords(ctx context.Context, targetID int64, sourceIDs []i
 			fmtUpper := strings.ToUpper(sf.Format)
 			if !targetFormats[fmtUpper] {
 				srcFileName := fmt.Sprintf("%s.%s", sf.Name, strings.ToLower(sf.Format))
-				dstFileName := fmt.Sprintf("%s.%s", target.Title, strings.ToLower(sf.Format))
+				dstFileName := fmt.Sprintf("%s.%s", sanitizeSafeFilename(target.Title), strings.ToLower(sf.Format))
 				srcFilePath := filepath.Join(sourceDir, srcFileName)
 				dstFilePath := filepath.Join(targetDir, dstFileName)
 
@@ -2088,6 +2088,7 @@ func parseFormats(str string) []DataFormat {
 	}
 	items := strings.Split(str, ",")
 	res := make([]DataFormat, 0, len(items))
+	seen := make(map[string]bool)
 	for _, it := range items {
 		var parts []string
 		if strings.Contains(it, "::") {
@@ -2096,6 +2097,11 @@ func parseFormats(str string) []DataFormat {
 			parts = strings.Split(it, ":")
 		}
 		if len(parts) >= 3 {
+			fmtUpper := strings.ToUpper(parts[0])
+			if seen[fmtUpper] {
+				continue
+			}
+			seen[fmtUpper] = true
 			size, _ := strconv.ParseInt(parts[1], 10, 64)
 			name := strings.ReplaceAll(parts[2], "__COMMA__", ",")
 			res = append(res, DataFormat{
@@ -2104,6 +2110,19 @@ func parseFormats(str string) []DataFormat {
 				Name:   name,
 			})
 		}
+	}
+	return res
+}
+
+func sanitizeSafeFilename(n string) string {
+	bad := []string{"/", "\\", ":", "*", "?", "\"", "<", ">", "|"}
+	res := n
+	for _, b := range bad {
+		res = strings.ReplaceAll(res, b, "_")
+	}
+	res = strings.TrimSpace(res)
+	if res == "" {
+		res = "book"
 	}
 	return res
 }

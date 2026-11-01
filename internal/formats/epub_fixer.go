@@ -113,7 +113,7 @@ func CleanOCRErrors(content []byte) ([]byte, int) {
 				fixes++
 			}
 
-			// 4. Correção de dígitos dentro de palavras (ex: n0vo -> novo, d1reito -> direito)
+// 4. Correção de dígitos dentro de palavras (ex: n0vo -> novo, d1reito -> direito)
 			if ocrDigitZero.MatchString(s) {
 				s = ocrDigitZero.ReplaceAllString(s, "${1}o${2}")
 				fixes++
