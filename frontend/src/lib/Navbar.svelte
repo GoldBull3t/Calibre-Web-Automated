@@ -134,11 +134,7 @@
       {/if}
     </div>
 
-    <!-- Quick Command Palette Button -->
-    <button class="cwa-nav-btn cwa-cmd-btn" on:click={() => dispatch('openPalette')} title="Command Palette (Ctrl+K)">
-      <svg viewBox="0 0 24 24" width="13" height="13"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
-      <span class="cmd-k-kbd">⌘K</span>
-    </button>
+
 
     <!-- Right Actions -->
     <div class="nav-actions">
@@ -239,9 +235,10 @@
 
   <button 
     class="bottom-nav-item" 
-    on:click={() => dispatch('openPalette')}>
-    <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="1"></circle><circle cx="12" cy="5" r="1"></circle><circle cx="12" cy="19" r="1"></circle></svg>
-    <span>Mais</span>
+    class:active={activeTab === 'cwa_settings'} 
+    on:click={() => setTab('cwa_settings')}>
+    <svg viewBox="0 0 24 24" width="18" height="18"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+    <span>CWA</span>
   </button>
 </nav>
 
@@ -430,19 +427,7 @@
     color: #ffffff;
   }
 
-  .cwa-cmd-btn {
-    padding: 0 8px;
-    gap: 4px;
-  }
-  .cmd-k-kbd {
-    font-size: 10px;
-    font-weight: 600;
-    padding: 1px 4px;
-    border-radius: 4px;
-    background: rgba(255, 255, 255, 0.08);
-    border: 1px solid rgba(255, 255, 255, 0.15);
-    color: #94a3b8;
-  }
+
 
   .nav-actions {
     display: flex;
@@ -598,8 +583,6 @@
     .mobile-bottom-nav {
       display: flex;
     }
-    .cwa-cmd-btn .cmd-k-kbd {
-      display: none;
-    }
+
   }
 </style>

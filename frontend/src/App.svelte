@@ -15,8 +15,7 @@
   import StatsView from './lib/StatsView.svelte';
   import Toast from './lib/Toast.svelte';
   import { toast } from './lib/toast.js';
-  import CommandPalette from './lib/CommandPalette.svelte';
-
+  
   const VALID_TABS = ['library', 'browse', 'shelves', 'fts', 'mam', 'sources', 'duplicates', 'cwa_settings', 'plugins', 'stats'];
 
   function getTabFromHash() {
@@ -30,8 +29,7 @@
   let theme = localStorage.getItem('cwa_theme') || 'dark';
   let currentUser = null;
 
-  // Command Palette & SSE state
-  let showCommandPalette = false;
+  // SSE state
   let sseSource = null;
 
   // Library query parameters
@@ -323,18 +321,6 @@
   <!-- Toast Notifications -->
   <Toast />
 
-  <!-- Global Command Palette (Ctrl+K / Cmd+K) -->
-  <CommandPalette 
-    isOpen={showCommandPalette}
-    on:close={() => { showCommandPalette = false; }}
-    on:open={() => { showCommandPalette = true; }}
-    on:navigate={handleNavigate}
-    on:openUpload={() => { showUploadModal = true; }}
-    on:toggleTheme={toggleTheme}
-    on:refresh={fetchBooks}
-    on:selectBook={handleSelectBook}
-  />
-
   <!-- Top Navigation Bar -->
   <Navbar 
     {activeTab} 
@@ -346,7 +332,6 @@
     on:search={handleSearch}
     on:toggleTheme={toggleTheme}
     on:openUpload={() => { showUploadModal = true; }}
-    on:openPalette={() => { showCommandPalette = true; }}
   />
 
   <!-- Main View Container -->
