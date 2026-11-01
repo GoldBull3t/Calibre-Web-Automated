@@ -16,6 +16,7 @@
     { id: 'nav-browse', category: 'Navegação', title: 'Explorar Catálogo', desc: 'Navegar por autores, séries, categorias e formatos', icon: 'compass', action: () => dispatch('navigate', { tab: 'browse' }) },
     { id: 'nav-shelves', category: 'Navegação', title: 'Estantes & Magic Shelves', desc: 'Gerir coleções e estantes inteligentes', icon: 'bookmark', action: () => dispatch('navigate', { tab: 'shelves' }) },
     { id: 'nav-fts', category: 'Pesquisa', title: 'Full-Text Search (FTS5)', desc: 'Pesquisa profunda no interior dos ficheiros EPUB/PDF', icon: 'search', action: () => dispatch('navigate', { tab: 'fts' }) },
+    { id: 'nav-sources', category: 'Ferramentas & Download', title: 'Central de Fontes & Aquisição', desc: "Pesquisa federada no Anna's Archive, Z-Library, Open Library e Gutenberg com 1-Click Ingest", icon: 'globe', action: () => dispatch('navigate', { tab: 'sources' }) },
     { id: 'nav-mam', category: 'Ferramentas', title: 'Cheeseshop Tracker (MAM)', desc: 'Pesquisa e download direto da comunidade 🐭🧀', icon: 'zap', action: () => dispatch('navigate', { tab: 'mam' }) },
     { id: 'nav-dups', category: 'Ferramentas', title: 'Detector de Duplicados', desc: 'Identificar e resolver livros duplicados', icon: 'copy', action: () => dispatch('navigate', { tab: 'duplicates' }) },
     { id: 'nav-plugins', category: 'Sistema', title: 'Gestor de Plugins & DeDRM', desc: 'Gerir extensões ativas do Calibre', icon: 'cpu', action: () => dispatch('navigate', { tab: 'plugins' }) },
@@ -194,6 +195,8 @@
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"></path></svg>
                 {:else if item.icon === 'search'}
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                {:else if item.icon === 'globe'}
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
                 {:else if item.icon === 'zap'}
                   <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"></polygon></svg>
                 {:else if item.icon === 'copy'}

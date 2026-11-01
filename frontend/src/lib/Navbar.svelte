@@ -84,11 +84,12 @@
       </button>
 
       <button 
-        class="nav-pill" 
+        class="nav-pill sources-pill" 
         class:active={activeTab === 'sources'} 
-        on:click={() => setTab('sources')}>
-        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg>
-        <span>Fontes</span>
+        on:click={() => setTab('sources')}
+        title="Central de Fontes & Download de Livros">
+        <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+        <span>Fontes &amp; Download</span>
       </button>
 
       <button 
@@ -252,6 +253,14 @@
     on:click={() => setTab('fts')}>
     <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
     <span>FTS</span>
+  </button>
+
+  <button 
+    class="bottom-nav-item sources-bottom-item" 
+    class:active={activeTab === 'sources'} 
+    on:click={() => setTab('sources')}>
+    <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
+    <span>Fontes</span>
   </button>
 
   <button 
@@ -433,6 +442,23 @@
     flex-shrink: 0;
   }
 
+
+  .sources-pill {
+    background: rgba(56, 189, 248, 0.08);
+    border: 1px solid rgba(56, 189, 248, 0.25);
+    color: #38bdf8;
+  }
+  .sources-pill:hover {
+    background: rgba(56, 189, 248, 0.16);
+    border-color: rgba(56, 189, 248, 0.45);
+    color: #7dd3fc;
+  }
+  .sources-pill.active {
+    background: #0284c7;
+    color: #ffffff;
+    border-color: #38bdf8;
+    box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
+  }
   .mam-badge {
     display: flex;
     align-items: center;
@@ -569,13 +595,13 @@
     border-color: #6366f1;
   }
 
-  @media (max-width: 1150px) {
+  @media (max-width: 860px) {
     .nav-links {
       display: none;
     }
   }
 
-  @media (max-width: 768px) {
+  @media (max-width: 860px) {
     .mobile-bottom-nav {
       display: flex;
     }

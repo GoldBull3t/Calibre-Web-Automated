@@ -128,6 +128,13 @@ func (openLibrary) Resolve(ctx context.Context, c *http.Client, _ map[string]str
 	return nil, errors.New("nenhum ficheiro EPUB/PDF/MOBI disponível para este item")
 }
 
+func (openLibrary) Test(ctx context.Context, c *http.Client, _ map[string]string) error {
+	var r struct {
+		Docs []struct{} `json:"docs"`
+	}
+	return getJSON(ctx, c, "https://openlibrary.org/search.json?limit=1&q=test", nil, &r)
+}
+
 // ---------------------------------------------------------------------------
 // Project Gutenberg (via Gutendex; sem chave)
 // ---------------------------------------------------------------------------
@@ -184,6 +191,13 @@ func (gutenberg) Resolve(ctx context.Context, c *http.Client, _ map[string]strin
 		}
 	}
 	return nil, errors.New("formato de livro eletrónico indisponível")
+}
+
+func (gutenberg) Test(ctx context.Context, c *http.Client, _ map[string]string) error {
+	var r struct {
+		Results []gutBook `json:"results"`
+	}
+	return getJSON(ctx, c, "https://gutendex.com/books/?search=test", nil, &r)
 }
 
 // ---------------------------------------------------------------------------
@@ -273,6 +287,28 @@ func (annasArchive) Resolve(ctx context.Context, c *http.Client, cfg map[string]
 		return nil, errors.New("Anna's Archive: " + r.Error)
 	}
 	return &Download{URL: r.URL, Filename: id}, nil
+}
+
+func (annasArchive) Test(ctx context.Context, c *http.Client, cfg map[string]string) error {
+	if cfg["base_url"] == "" {
+		return errors.New("o URL base do mirror é obrigatório (ex: https://annas-archive.li)")
+	}
+	if cfg["api_key"] == "" {
+		return errors.New("a chave de membro (secret key) é obrigatória")
+	}
+	u := strings.TrimRight(cfg["base_url"], "/") + "/dyn/api/fast_download.json?md5=00000000000000000000000000000000&key=" + url.QueryEscape(cfg["api_key"])
+	b, err := doReq(ctx, c, http.MethodGet, u, nil, nil)
+	if err != nil {
+		return fmt.Errorf("mirror inacessível ou offline: %w", err)
+	}
+	var r struct {
+		Error string `json:"error"`
+	}
+	_ = json.Unmarshal(b, &r)
+	if strings.Contains(strings.ToLower(r.Error), "invalid secret key") || strings.Contains(strings.ToLower(r.Error), "invalid key") {
+		return errors.New("chave de membro inválida (verifique a Secret Key da sua conta Anna's Archive)")
+	}
+	return nil
 }
 
 // ---------------------------------------------------------------------------
@@ -365,4 +401,31 @@ func (zLibrary) Resolve(ctx context.Context, c *http.Client, cfg map[string]stri
 		name += "." + r.File.Ext
 	}
 	return &Download{URL: r.File.Link, Filename: name, Header: http.Header{"Cookie": {zHeaders(cfg)["Cookie"]}}}, nil
+}
+
+func (zLibrary) Test(ctx context.Context, c *http.Client, cfg map[string]string) error {
+	if cfg["base_url"] == "" || cfg["user_id"] == "" || cfg["user_key"] == "" {
+		return errors.New("URL base, remix_userid e remix_userkey são todos obrigatórios")
+	}
+	form := url.Values{"message": {"test"}, "limit": {"1"}}
+	h := zHeaders(cfg)
+	h["Content-Type"] = "application/x-www-form-urlencoded"
+	b, err := doReq(ctx, c, http.MethodPost, strings.TrimRight(cfg["base_url"], "/")+"/eapi/book/search", strings.NewReader(form.Encode()), h)
+	if err != nil {
+		return fmt.Errorf("falha ao contactar domínio Z-Library: %w", err)
+	}
+	var r struct {
+		Success int    `json:"success"`
+		Error   string `json:"error"`
+		Message string `json:"message"`
+	}
+	_ = json.Unmarshal(b, &r)
+	if r.Error != "" || r.Message != "" {
+		msg := r.Error
+		if msg == "" {
+			msg = r.Message
+		}
+		return errors.New("Z-Library: " + msg)
+	}
+	return nil
 }

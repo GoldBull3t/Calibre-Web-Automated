@@ -389,6 +389,7 @@ func main() {
 	mux.HandleFunc("POST /api/mam/download/{id}", h.MAMDownload)
 	mux.HandleFunc("GET /api/sources", h.SourcesList)
 	mux.HandleFunc("POST /api/sources/{id}/config", h.SourcesConfig)
+	mux.HandleFunc("POST /api/sources/{id}/test", h.SourcesTest)
 	mux.HandleFunc("GET /api/sources/search", h.SourcesSearch)
 	mux.HandleFunc("POST /api/sources/download", h.SourcesDownload)
 	mux.HandleFunc("GET /api/admin/plugins", h.PluginsList)

@@ -54,6 +54,7 @@ const cwaSettingsHTML = `<!DOCTYPE html>
                         </form>
                     </li>
                     <li class="top_tasks"><a id="top_tasks" href="/tasks"><span class="glyphicon glyphicon-tasks"></span> <span class="hidden-sm">Tasks</span></a></li>
+                    <li><a id="top_sources" href="/app#sources" style="color: #38bdf8; font-weight: 600;"><span class="glyphicon glyphicon-cloud-download"></span> <span class="hidden-sm">Fontes</span></a></li>
                     <li><a id="top_admin" href="/admin"><span class="glyphicon glyphicon-dashboard"></span> <span class="hidden-sm">Admin</span></a></li>
                     <li class="cwa-switch-theme">
                         <a id="cwa-switch-theme" href="/cwa-switch-theme">
@@ -66,6 +67,7 @@ const cwaSettingsHTML = `<!DOCTYPE html>
                         <a href="#" class="dropdown-toggle profileDrop" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><span class="glyphicon glyphicon-user"></span></a>
                         <ul class="dropdown-menu profileDropli">
                             <li><a id="top_user" href="/me"><span class="glyphicon glyphicon-user"></span> <span class="hidden-sm">Profile</span></a></li>
+                            <li><a href="/app#sources"><span class="glyphicon glyphicon-cloud-download"></span> Fontes &amp; Downloads</a></li>
                             <li><a href="/cwa-settings"><span class="glyphicon glyphicon-cog"></span> CWA Settings</a></li>
                             <li><a href="/cwa-stats"><span class="glyphicon glyphicon-stats"></span> Deep Analytics</a></li>
                             <li><a href="/duplicates"><span class="glyphicon glyphicon-duplicate"></span> Duplicates</a></li>
@@ -374,6 +376,7 @@ const cwaConvertHTML = `<!DOCTYPE html>
                         </form>
                     </li>
                     <li class="top_tasks"><a id="top_tasks" href="/tasks"><span class="glyphicon glyphicon-tasks"></span> <span class="hidden-sm">Tasks</span></a></li>
+                    <li><a id="top_sources" href="/app#sources" style="color: #38bdf8; font-weight: 600;"><span class="glyphicon glyphicon-cloud-download"></span> <span class="hidden-sm">Fontes</span></a></li>
                     <li><a id="top_admin" href="/admin"><span class="glyphicon glyphicon-dashboard"></span> <span class="hidden-sm">Admin</span></a></li>
                     <li class="cwa-switch-theme">
                         <a id="cwa-switch-theme" href="/cwa-switch-theme">
@@ -386,6 +389,7 @@ const cwaConvertHTML = `<!DOCTYPE html>
                         <a href="#" class="dropdown-toggle profileDrop" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><span class="glyphicon glyphicon-user"></span></a>
                         <ul class="dropdown-menu profileDropli">
                             <li><a id="top_user" href="/me"><span class="glyphicon glyphicon-user"></span> <span class="hidden-sm">Profile</span></a></li>
+                            <li><a href="/app#sources"><span class="glyphicon glyphicon-cloud-download"></span> Fontes &amp; Downloads</a></li>
                             <li><a href="/cwa-settings"><span class="glyphicon glyphicon-cog"></span> CWA Settings</a></li>
                             <li><a href="/cwa-stats"><span class="glyphicon glyphicon-stats"></span> Deep Analytics</a></li>
                             <li><a href="/duplicates"><span class="glyphicon glyphicon-duplicate"></span> Duplicates</a></li>
@@ -540,6 +544,7 @@ const cwaFixerHTML = `<!DOCTYPE html>
                         </form>
                     </li>
                     <li class="top_tasks"><a id="top_tasks" href="/tasks"><span class="glyphicon glyphicon-tasks"></span> <span class="hidden-sm">Tasks</span></a></li>
+                    <li><a id="top_sources" href="/app#sources" style="color: #38bdf8; font-weight: 600;"><span class="glyphicon glyphicon-cloud-download"></span> <span class="hidden-sm">Fontes</span></a></li>
                     <li><a id="top_admin" href="/admin"><span class="glyphicon glyphicon-dashboard"></span> <span class="hidden-sm">Admin</span></a></li>
                     <li class="cwa-switch-theme">
                         <a id="cwa-switch-theme" href="/cwa-switch-theme">
@@ -552,6 +557,7 @@ const cwaFixerHTML = `<!DOCTYPE html>
                         <a href="#" class="dropdown-toggle profileDrop" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><span class="glyphicon glyphicon-user"></span></a>
                         <ul class="dropdown-menu profileDropli">
                             <li><a id="top_user" href="/me"><span class="glyphicon glyphicon-user"></span> <span class="hidden-sm">Profile</span></a></li>
+                            <li><a href="/app#sources"><span class="glyphicon glyphicon-cloud-download"></span> Fontes &amp; Downloads</a></li>
                             <li><a href="/cwa-settings"><span class="glyphicon glyphicon-cog"></span> CWA Settings</a></li>
                             <li><a href="/cwa-stats"><span class="glyphicon glyphicon-stats"></span> Deep Analytics</a></li>
                             <li><a href="/duplicates"><span class="glyphicon glyphicon-duplicate"></span> Duplicates</a></li>
@@ -719,6 +725,7 @@ const cwaBackupHTML = `<!DOCTYPE html>
                         </form>
                     </li>
                     <li class="top_tasks"><a id="top_tasks" href="/tasks"><span class="glyphicon glyphicon-tasks"></span> <span class="hidden-sm">Tasks</span></a></li>
+                    <li><a id="top_sources" href="/app#sources" style="color: #38bdf8; font-weight: 600;"><span class="glyphicon glyphicon-cloud-download"></span> <span class="hidden-sm">Fontes</span></a></li>
                     <li><a id="top_admin" href="/admin"><span class="glyphicon glyphicon-dashboard"></span> <span class="hidden-sm">Admin</span></a></li>
                     <li class="cwa-switch-theme">
                         <a id="cwa-switch-theme" href="/cwa-switch-theme">
@@ -731,6 +738,7 @@ const cwaBackupHTML = `<!DOCTYPE html>
                         <a href="#" class="dropdown-toggle profileDrop" data-toggle="dropdown" role="button" aria-haspopup="true" aria-expanded="false"><span class="glyphicon glyphicon-user"></span></a>
                         <ul class="dropdown-menu profileDropli">
                             <li><a id="top_user" href="/me"><span class="glyphicon glyphicon-user"></span> <span class="hidden-sm">Profile</span></a></li>
+                            <li><a href="/app#sources"><span class="glyphicon glyphicon-cloud-download"></span> Fontes &amp; Downloads</a></li>
                             <li><a href="/cwa-settings"><span class="glyphicon glyphicon-cog"></span> CWA Settings</a></li>
                             <li><a href="/cwa-stats"><span class="glyphicon glyphicon-stats"></span> Deep Analytics</a></li>
                             <li><a href="/duplicates"><span class="glyphicon glyphicon-duplicate"></span> Duplicates</a></li>

@@ -58,6 +58,7 @@ type Provider interface {
 	Configured(cfg map[string]string) bool
 	Search(ctx context.Context, c *http.Client, cfg map[string]string, query string) ([]Result, error)
 	Resolve(ctx context.Context, c *http.Client, cfg map[string]string, id string) (*Download, error)
+	Test(ctx context.Context, c *http.Client, cfg map[string]string) error
 }
 
 // Info é o estado público de uma fonte (sem segredos).
@@ -180,6 +181,28 @@ func (m *Manager) Configure(id string, values map[string]string, enabled bool) e
 		return err
 	}
 	return os.WriteFile(m.path, b, 0o600)
+}
+
+// TestProvider testa a conectividade e credenciais de uma fonte com valores atuais ou novos.
+func (m *Manager) TestProvider(ctx context.Context, id string, overrideVals map[string]string) error {
+	m.mu.RLock()
+	p, ok := m.providers[id]
+	if !ok {
+		m.mu.RUnlock()
+		return fmt.Errorf("fonte desconhecida: %s", id)
+	}
+	cfg := m.values(p)
+	m.mu.RUnlock()
+
+	for k, v := range overrideVals {
+		if v != "" && v != "********" {
+			cfg[k] = strings.TrimSpace(v)
+		}
+	}
+
+	cctx, cancel := context.WithTimeout(ctx, 15*time.Second)
+	defer cancel()
+	return p.Test(cctx, m.client, cfg)
 }
 
 // SearchResult agrega resultados e erros por fonte.
