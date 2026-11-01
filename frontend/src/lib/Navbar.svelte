@@ -84,12 +84,11 @@
       </button>
 
       <button 
-        class="nav-pill sources-pill" 
+        class="nav-pill" 
         class:active={activeTab === 'sources'} 
-        on:click={() => setTab('sources')}
-        title="Central de Fontes & Download de Livros">
+        on:click={() => setTab('sources')}>
         <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"></circle><line x1="2" y1="12" x2="22" y2="12"></line><path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"></path></svg>
-        <span>Fontes &amp; Download</span>
+        <span>Fontes</span>
       </button>
 
       <button 
@@ -443,22 +442,6 @@
   }
 
 
-  .sources-pill {
-    background: rgba(56, 189, 248, 0.08);
-    border: 1px solid rgba(56, 189, 248, 0.25);
-    color: #38bdf8;
-  }
-  .sources-pill:hover {
-    background: rgba(56, 189, 248, 0.16);
-    border-color: rgba(56, 189, 248, 0.45);
-    color: #7dd3fc;
-  }
-  .sources-pill.active {
-    background: #0284c7;
-    color: #ffffff;
-    border-color: #38bdf8;
-    box-shadow: 0 0 12px rgba(56, 189, 248, 0.35);
-  }
   .mam-badge {
     display: flex;
     align-items: center;
