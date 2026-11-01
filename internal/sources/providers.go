@@ -177,9 +177,10 @@ func (gutenberg) Resolve(ctx context.Context, c *http.Client, _ map[string]strin
 	if err := getJSON(ctx, c, "https://gutendex.com/books/"+id, nil, &b); err != nil {
 		return nil, err
 	}
+	exts := map[string]string{"application/epub+zip": ".epub", "application/x-mobipocket-ebook": ".mobi", "application/pdf": ".pdf"}
 	for _, mt := range []string{"application/epub+zip", "application/x-mobipocket-ebook", "application/pdf"} {
 		if u := b.Formats[mt]; u != "" {
-			return &Download{URL: u}, nil
+			return &Download{URL: u, Filename: "gutenberg_" + id + exts[mt]}, nil
 		}
 	}
 	return nil, errors.New("formato de livro eletrónico indisponível")
@@ -195,15 +196,21 @@ type annasArchive struct{}
 func (annasArchive) ID() string   { return "annas" }
 func (annasArchive) Name() string { return "Anna's Archive" }
 func (annasArchive) Description() string {
-	return "Requer a chave secreta de membro (API fast download). O domínio é configurável porque muda com frequência."
+	return "Requer a chave secreta de membro (API fast download) e um mirror ativo (os domínios mudam com frequência). " +
+		"Não existe API de pesquisa: cole o MD5 ou o link /md5/... do livro para descarregar de forma fiável; " +
+		"a pesquisa por texto é feita por leitura da página e pode falhar."
 }
 func (annasArchive) Fields() []Field {
 	return []Field{
-		{Key: "base_url", Label: "URL base", Default: "https://annas-archive.org"},
+		{Key: "base_url", Label: "URL base de um mirror ativo (ex.: https://annas-archive.xx)"},
 		{Key: "api_key", Label: "Chave de membro (secret key)", Secret: true},
 	}
 }
-func (annasArchive) Configured(cfg map[string]string) bool { return cfg["api_key"] != "" }
+func (annasArchive) Configured(cfg map[string]string) bool {
+	return cfg["api_key"] != "" && cfg["base_url"] != ""
+}
+
+var md5InText = regexp.MustCompile(`(?i)\b([0-9a-f]{32})\b`)
 
 var (
 	annaLink = regexp.MustCompile(`(?s)<a[^>]*href="/md5/([0-9a-f]{32})"[^>]*>(.*?)</a>`)
@@ -212,6 +219,11 @@ var (
 )
 
 func (annasArchive) Search(ctx context.Context, c *http.Client, cfg map[string]string, q string) ([]Result, error) {
+	// Pesquisa por MD5 (ou link /md5/...): resultado direto, sem scraping.
+	if m := md5InText.FindStringSubmatch(q); m != nil {
+		md5 := strings.ToLower(m[1])
+		return []Result{{Source: "annas", ID: md5, Title: "Ficheiro MD5 " + md5}}, nil
+	}
 	b, err := doReq(ctx, c, http.MethodGet, cfg["base_url"]+"/search?q="+url.QueryEscape(q), nil, nil)
 	if err != nil {
 		return nil, err
@@ -231,6 +243,9 @@ func (annasArchive) Search(ctx context.Context, c *http.Client, cfg map[string]s
 		if len(out) >= 25 {
 			break
 		}
+	}
+	if len(out) == 0 {
+		return nil, errors.New("sem resultados legíveis (o mirror pode estar offline, protegido por captcha ou ter mudado de layout); cole o MD5 ou o link /md5/... do livro")
 	}
 	return out, nil
 }
@@ -283,7 +298,11 @@ func (zLibrary) Configured(cfg map[string]string) bool {
 }
 
 func zHeaders(cfg map[string]string) map[string]string {
-	return map[string]string{"Cookie": "remix_userid=" + cfg["user_id"] + "; remix_userkey=" + cfg["user_key"]}
+	return map[string]string{
+		"Cookie":        "remix_userid=" + cfg["user_id"] + "; remix_userkey=" + cfg["user_key"],
+		"remix-userid":  cfg["user_id"],
+		"remix-userkey": cfg["user_key"],
+	}
 }
 
 func (zLibrary) Search(ctx context.Context, c *http.Client, cfg map[string]string, q string) ([]Result, error) {

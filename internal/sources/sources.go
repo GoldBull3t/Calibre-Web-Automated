@@ -304,6 +304,7 @@ func (m *Manager) DownloadToDir(ctx context.Context, source, id, destDir string)
 	if err := tmp.Close(); err != nil {
 		return "", err
 	}
+	name = ensureBookExt(name, tmp.Name(), resp.Header.Get("Content-Type"))
 	if err := os.MkdirAll(destDir, 0o755); err != nil {
 		return "", err
 	}
@@ -317,6 +318,45 @@ func (m *Manager) DownloadToDir(ctx context.Context, source, id, destDir string)
 		return "", err
 	}
 	return dest, nil
+}
+
+var bookExts = map[string]bool{".epub": true, ".pdf": true, ".mobi": true, ".azw3": true, ".azw": true, ".fb2": true, ".cbz": true, ".cbr": true, ".djvu": true, ".txt": true}
+
+// ensureBookExt garante que o nome tem uma extensão de livro reconhecida, deduzida do
+// Content-Type ou dos primeiros bytes do ficheiro quando necessário.
+func ensureBookExt(name, path, contentType string) string {
+	if bookExts[strings.ToLower(filepath.Ext(name))] {
+		return name
+	}
+	ext := ""
+	switch {
+	case strings.Contains(contentType, "epub"):
+		ext = ".epub"
+	case strings.Contains(contentType, "pdf"):
+		ext = ".pdf"
+	case strings.Contains(contentType, "mobipocket"):
+		ext = ".mobi"
+	}
+	if ext == "" {
+		if f, err := os.Open(path); err == nil {
+			head := make([]byte, 68)
+			n, _ := f.Read(head)
+			f.Close()
+			head = head[:n]
+			switch {
+			case strings.HasPrefix(string(head), "%PDF"):
+				ext = ".pdf"
+			case strings.HasPrefix(string(head), "PK"):
+				ext = ".epub"
+			case n >= 68 && string(head[60:68]) == "BOOKMOBI":
+				ext = ".mobi"
+			}
+		}
+	}
+	if ext == "" {
+		return name
+	}
+	return strings.TrimSuffix(name, filepath.Ext(name)) + ext
 }
 
 func copyFile(src, dst string) error {
