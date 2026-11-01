@@ -219,3 +219,4 @@ go.work.sum
 # Explicitly allow CWA Go & Svelte frontend paths
 !frontend/src/lib/
 !internal/spa/dist/
+!internal/plugins/
