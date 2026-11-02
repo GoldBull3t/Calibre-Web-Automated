@@ -373,6 +373,7 @@ func (h *Handler) ReaderWeb(w http.ResponseWriter, r *http.Request) {
 	format := r.PathValue("format")
 	hasCBZ := false
 	hasEPUB := false
+	hasPDF := false
 	for _, f := range book.Formats {
 		if strings.EqualFold(f.Format, "CBZ") || strings.EqualFold(f.Format, "CBR") {
 			hasCBZ = true
@@ -380,15 +381,29 @@ func (h *Handler) ReaderWeb(w http.ResponseWriter, r *http.Request) {
 		if strings.EqualFold(f.Format, "EPUB") {
 			hasEPUB = true
 		}
+		if strings.EqualFold(f.Format, "PDF") {
+			hasPDF = true
+		}
 	}
 
-	if strings.EqualFold(format, "cbz") || strings.EqualFold(format, "cbr") || strings.EqualFold(format, "comic") || (hasCBZ && !hasEPUB && format == "") {
+	if strings.EqualFold(format, "cbz") || strings.EqualFold(format, "cbr") || strings.EqualFold(format, "comic") || (hasCBZ && !hasEPUB && !hasPDF && format == "") {
 		h.ComicReaderWeb(w, r, id)
 		return
 	}
 
+	if strings.EqualFold(format, "pdf") || (hasPDF && !hasEPUB && format == "") {
+		h.PDFReaderWeb(w, r, id, book)
+		return
+	}
+
 	if format == "" {
-		format = "epub"
+		if hasEPUB {
+			format = "epub"
+		} else if len(book.Formats) > 0 {
+			format = strings.ToLower(book.Formats[0].Format)
+		} else {
+			format = "epub"
+		}
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
@@ -409,6 +424,68 @@ func (h *Handler) ReaderWeb(w http.ResponseWriter, r *http.Request) {
 }
 
 // UploadBook processa o envio de ficheiros e copia diretamente para ingestDir.
+
+// PDFReaderWeb disponibiliza o leitor dedicado de PDFs em linha com streaming de ficheiro nativo e sem erros.
+func (h *Handler) PDFReaderWeb(w http.ResponseWriter, r *http.Request, id int64, book *database.BookDetails) {
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	html := fmt.Sprintf(`<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>%%s — Leitor de PDF</title>
+  <link rel="shortcut icon" href="/static/favicon.ico">
+  <style>
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    html, body { width: 100%%%%; height: 100%%%%; overflow: hidden; background: #0b0f19; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; }
+    #pdf-header {
+      height: 48px; background: rgba(15, 23, 42, 0.95); border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex; align-items: center; justify-content: space-between; padding: 0 16px; flex-shrink: 0;
+      backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); z-index: 10;
+    }
+    .header-btn {
+      background: transparent; border: 1px solid transparent; color: #e2e8f0; border-radius: 8px;
+      height: 32px; padding: 0 12px; display: inline-flex; align-items: center; gap: 6px; font-size: 12px;
+      font-weight: 500; text-decoration: none; cursor: pointer; transition: all 0.15s;
+    }
+    .header-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.12); }
+    .header-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+    .book-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 48vw; }
+    #pdf-container { flex: 1; width: 100%%%%; height: calc(100%%%% - 48px); background: #1e293b; position: relative; }
+    #pdf-frame { width: 100%%%%; height: 100%%%%; border: none; display: block; }
+  </style>
+</head>
+<body>
+  <header id="pdf-header">
+    <a href="/" class="header-btn" title="Voltar à Biblioteca">
+      <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
+      <span>Biblioteca</span>
+    </a>
+    <div class="book-title">%%s</div>
+    <div style="display:flex; align-items:center; gap:8px;">
+      <a href="/download/%%d/pdf" class="header-btn" download title="Descarregar PDF">
+        <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
+        <span>Descarregar</span>
+      </a>
+      <button id="btn-fullscreen" class="header-btn" title="Ecrã Completo">
+        <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      </button>
+    </div>
+  </header>
+  <main id="pdf-container">
+    <iframe id="pdf-frame" src="/show/%%d/pdf/book.pdf#view=FitH" type="application/pdf"></iframe>
+  </main>
+  <script>
+    document.getElementById("btn-fullscreen").addEventListener("click", function() {
+      if (!document.fullscreenElement) document.documentElement.requestFullscreen().catch(function(){});
+      else document.exitFullscreen().catch(function(){});
+    });
+  </script>
+</body>
+</html>`, book.Title, book.Title, id, id)
+	_, _ = w.Write([]byte(html))
+}
+
 func (h *Handler) UploadBook(w http.ResponseWriter, r *http.Request) {
 	u := h.CurrentUser(r)
 	if !auth.HasPermission(u, auth.RoleUpload) {
