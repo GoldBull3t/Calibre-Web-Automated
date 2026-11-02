@@ -18,6 +18,7 @@ import (
 type ExtractedBook struct {
 	Title       string
 	Authors     []string
+	Tags        []string
 	Description string
 	Publisher   string
 	Language    string
@@ -58,6 +59,7 @@ func extractEPUB(filePath string) (*ExtractedBook, error) {
 	book := &ExtractedBook{
 		Title:       meta.Title,
 		Authors:     meta.Authors,
+		Tags:        meta.Subjects,
 		Description: meta.Description,
 		Publisher:   meta.Publisher,
 		Language:    meta.Language,

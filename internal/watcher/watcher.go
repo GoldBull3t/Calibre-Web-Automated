@@ -385,6 +385,25 @@ func (w *Watcher) processFile(srcPath string) error {
 			_, _ = tx.Exec("INSERT INTO identifiers (book, type, val) VALUES (?, ?, ?)", bookID, k, v)
 		}
 
+		// 10.1 Inserir Categorias e Tags extraídas do livro
+		for _, t := range meta.Tags {
+			t = strings.TrimSpace(t)
+			if t == "" {
+				continue
+			}
+			var tagID int64
+			tErr := tx.QueryRow("SELECT id FROM tags WHERE name = ?", t).Scan(&tagID)
+			if tErr == sql.ErrNoRows {
+				resT, errT := tx.Exec("INSERT INTO tags (name) VALUES (?)", t)
+				if errT == nil {
+					tagID, _ = resT.LastInsertId()
+				}
+			}
+			if tagID > 0 {
+				_, _ = tx.Exec("INSERT OR IGNORE INTO books_tags_link (book, tag) VALUES (?, ?)", bookID, tagID)
+			}
+		}
+
 		// 11. Atualizar caminho e flag de capa
 		_, err = tx.Exec("UPDATE books SET path = ?, has_cover = ? WHERE id = ?", filepath.ToSlash(relPath), hasCover, bookID)
 		if err != nil {
@@ -417,8 +436,8 @@ if w.converterPool != nil {
 		}
 
 		// 13. Metadados e capa automáticos online se ausentes
-		if hasCover == 0 || meta.Description == "" {
-			go func(bID int64, bTitle, bAuthor, targetDir string, needCover, needDesc bool) {
+		if hasCover == 0 || meta.Description == "" || len(meta.Tags) == 0 {
+			go func(bID int64, bTitle, bAuthor, targetDir string, needCover, needDesc, needTags bool) {
 				results := metadata.SearchOnline(context.Background(), bTitle+" "+bAuthor)
 				if len(results) == 0 {
 					return
@@ -427,6 +446,23 @@ if w.converterPool != nil {
 				_ = w.db.ExecuteWrite(func(txW *sql.Tx) error {
 					if needDesc && first.Description != "" {
 						_, _ = txW.Exec("INSERT OR REPLACE INTO comments (book, text) VALUES (?, ?)", bID, first.Description)
+					}
+					if needTags && len(first.Tags) > 0 {
+						for _, t := range first.Tags {
+							t = strings.TrimSpace(t)
+							if t == "" {
+								continue
+							}
+							var tID int64
+							if errQ := txW.QueryRow("SELECT id FROM tags WHERE name = ?", t).Scan(&tID); errQ == sql.ErrNoRows {
+								if rT, errI := txW.Exec("INSERT INTO tags (name) VALUES (?)", t); errI == nil {
+									tID, _ = rT.LastInsertId()
+								}
+							}
+							if tID > 0 {
+								_, _ = txW.Exec("INSERT OR IGNORE INTO books_tags_link (book, tag) VALUES (?, ?)", bID, tID)
+							}
+						}
 					}
 					if needCover && first.Cover != "" && isSafeCoverURL(first.Cover) {
 						if resp, err := coverClient.Get(first.Cover); err == nil && resp.StatusCode == 200 {
@@ -445,7 +481,7 @@ if w.converterPool != nil {
 					}
 					return nil
 				})
-			}(bookID, title, author, absBookDir, hasCover == 0, meta.Description == "")
+			}(bookID, title, author, absBookDir, hasCover == 0, meta.Description == "", len(meta.Tags) == 0)
 		}
 
 		return nil

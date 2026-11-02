@@ -1060,18 +1060,19 @@ func (d *DB) ListLanguages(ctx context.Context, page, pageSize int) (*PageResult
 // ListFormats lista todos os formatos disponíveis e quantidade de livros.
 func (d *DB) ListFormats(ctx context.Context) ([]EntityCount, error) {
 	query := `
-		SELECT format, COUNT(DISTINCT book) AS book_count
+		SELECT UPPER(format) AS fmt, COUNT(DISTINCT book) AS book_count
 		FROM data
-		GROUP BY format
-		ORDER BY format ASC
+		WHERE format IS NOT NULL AND TRIM(format) != ''
+		GROUP BY UPPER(format)
+		ORDER BY fmt ASC
 	`
 	rows, err := d.roPool.QueryContext(ctx, query)
 	if err != nil {
-		return nil, err
+		return []EntityCount{}, err
 	}
 	defer rows.Close()
 
-	var items []EntityCount
+	items := make([]EntityCount, 0)
 	for rows.Next() {
 		var format string
 		var count int
@@ -1083,7 +1084,7 @@ func (d *DB) ListFormats(ctx context.Context) ([]EntityCount, error) {
 		}
 	}
 	if err := rows.Err(); err != nil {
-		return nil, err
+		return items, err
 	}
 	return items, nil
 }
@@ -1171,7 +1172,7 @@ func (d *DB) GetAllAuthors(ctx context.Context) ([]EntityCount, error) {
 	}
 	defer rows.Close()
 
-	var items []EntityCount
+	items := make([]EntityCount, 0)
 	for rows.Next() {
 		var ec EntityCount
 		if err := rows.Scan(&ec.ID, &ec.Name, &ec.Count); err == nil {
@@ -1187,16 +1188,17 @@ func (d *DB) GetAllPublishers(ctx context.Context) ([]EntityCount, error) {
 		SELECT p.id, p.name, COUNT(DISTINCT bpl.book) AS book_count
 		FROM publishers p
 		LEFT JOIN books_publishers_link bpl ON p.id = bpl.publisher
+		WHERE p.name IS NOT NULL AND TRIM(p.name) != ''
 		GROUP BY p.id
 		ORDER BY p.name COLLATE NOCASE ASC
 	`
 	rows, err := d.roPool.QueryContext(ctx, query)
 	if err != nil {
-		return nil, err
+		return []EntityCount{}, err
 	}
 	defer rows.Close()
 
-	var items []EntityCount
+	items := make([]EntityCount, 0)
 	for rows.Next() {
 		var ec EntityCount
 		if err := rows.Scan(&ec.ID, &ec.Name, &ec.Count); err == nil {
@@ -1212,16 +1214,17 @@ func (d *DB) GetAllTags(ctx context.Context) ([]EntityCount, error) {
 		SELECT t.id, t.name, COUNT(DISTINCT btl.book) AS book_count
 		FROM tags t
 		LEFT JOIN books_tags_link btl ON t.id = btl.tag
+		WHERE t.name IS NOT NULL AND TRIM(t.name) != ''
 		GROUP BY t.id
 		ORDER BY t.name COLLATE NOCASE ASC
 	`
 	rows, err := d.roPool.QueryContext(ctx, query)
 	if err != nil {
-		return nil, err
+		return []EntityCount{}, err
 	}
 	defer rows.Close()
 
-	var items []EntityCount
+	items := make([]EntityCount, 0)
 	for rows.Next() {
 		var ec EntityCount
 		if err := rows.Scan(&ec.ID, &ec.Name, &ec.Count); err == nil {
@@ -1237,16 +1240,17 @@ func (d *DB) GetAllSeries(ctx context.Context) ([]EntityCount, error) {
 		SELECT s.id, s.name, COUNT(DISTINCT bsl.book) AS book_count
 		FROM series s
 		LEFT JOIN books_series_link bsl ON s.id = bsl.series
+		WHERE s.name IS NOT NULL AND TRIM(s.name) != ''
 		GROUP BY s.id
 		ORDER BY s.name COLLATE NOCASE ASC
 	`
 	rows, err := d.roPool.QueryContext(ctx, query)
 	if err != nil {
-		return nil, err
+		return []EntityCount{}, err
 	}
 	defer rows.Close()
 
-	var items []EntityCount
+	items := make([]EntityCount, 0)
 	for rows.Next() {
 		var ec EntityCount
 		if err := rows.Scan(&ec.ID, &ec.Name, &ec.Count); err == nil {
@@ -1262,16 +1266,17 @@ func (d *DB) GetAllLanguages(ctx context.Context) ([]EntityCount, error) {
 		SELECT l.id, l.lang_code, COUNT(DISTINCT bll.book) AS book_count
 		FROM languages l
 		LEFT JOIN books_languages_link bll ON l.id = bll.lang_code
+		WHERE l.lang_code IS NOT NULL AND TRIM(l.lang_code) != ''
 		GROUP BY l.id
 		ORDER BY l.lang_code ASC
 	`
 	rows, err := d.roPool.QueryContext(ctx, query)
 	if err != nil {
-		return nil, err
+		return []EntityCount{}, err
 	}
 	defer rows.Close()
 
-	var items []EntityCount
+	items := make([]EntityCount, 0)
 	for rows.Next() {
 		var ec EntityCount
 		if err := rows.Scan(&ec.ID, &ec.Name, &ec.Count); err == nil {

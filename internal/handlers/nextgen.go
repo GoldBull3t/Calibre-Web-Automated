@@ -509,7 +509,7 @@ func (h *Handler) APIStatsOverview(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) APIGetAuthors(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	authors, err := h.db.GetAllAuthors(r.Context())
-	if err != nil {
+	if err != nil || authors == nil {
 		authors = []database.EntityCount{}
 	}
 	_ = json.NewEncoder(w).Encode(authors)
@@ -519,7 +519,7 @@ func (h *Handler) APIGetAuthors(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) APIGetSeries(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	series, err := h.db.GetAllSeries(r.Context())
-	if err != nil {
+	if err != nil || series == nil {
 		series = []database.EntityCount{}
 	}
 	_ = json.NewEncoder(w).Encode(series)
@@ -529,7 +529,7 @@ func (h *Handler) APIGetSeries(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) APIGetTags(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	tags, err := h.db.GetAllTags(r.Context())
-	if err != nil {
+	if err != nil || tags == nil {
 		tags = []database.EntityCount{}
 	}
 	_ = json.NewEncoder(w).Encode(tags)
@@ -539,7 +539,7 @@ func (h *Handler) APIGetTags(w http.ResponseWriter, r *http.Request) {
 func (h *Handler) APIGetFormats(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("Content-Type", "application/json")
 	formats, err := h.db.ListFormats(r.Context())
-	if err != nil {
+	if err != nil || formats == nil {
 		formats = []database.EntityCount{}
 	}
 	_ = json.NewEncoder(w).Encode(formats)

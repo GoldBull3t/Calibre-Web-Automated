@@ -16,6 +16,7 @@ import (
 type Metadata struct {
 	Title       string
 	Authors     []string
+	Subjects    []string
 	Description string
 	Publisher   string
 	Language    string
@@ -43,6 +44,7 @@ type opfPackage struct {
 type opfMetadata struct {
 	Titles      []string        `xml:"title"`
 	Creators    []string        `xml:"creator"`
+	Subjects    []string        `xml:"subject"`
 	Description string          `xml:"description"`
 	Publisher   string          `xml:"publisher"`
 	Language    string          `xml:"language"`
@@ -126,7 +128,15 @@ func ExtractMetadata(epubPath string) (*Metadata, error) {
 		return nil, fmt.Errorf("erro no decode do OPF: %w", err)
 	}
 
+	var subjects []string
+	for _, s := range pkg.Metadata.Subjects {
+		if tr := strings.TrimSpace(s); tr != "" {
+			subjects = append(subjects, tr)
+		}
+	}
+
 	meta := &Metadata{
+		Subjects:    subjects,
 		Description: strings.TrimSpace(pkg.Metadata.Description),
 		Publisher:   strings.TrimSpace(pkg.Metadata.Publisher),
 		Language:    strings.TrimSpace(pkg.Metadata.Language),

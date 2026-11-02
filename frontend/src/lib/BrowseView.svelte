@@ -17,17 +17,21 @@
     loading = true;
     try {
       const [resA, resS, resT, resF] = await Promise.all([
-        fetch('/api/authors'),
-        fetch('/api/series'),
-        fetch('/api/tags'),
-        fetch('/api/formats')
+        fetch('/api/authors').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch('/api/series').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch('/api/tags').then(r => r.ok ? r.json() : []).catch(() => []),
+        fetch('/api/formats').then(r => r.ok ? r.json() : []).catch(() => [])
       ]);
-      authors = await resA.json();
-      series = await resS.json();
-      tags = await resT.json();
-      formats = await resF.json();
+      authors = Array.isArray(resA) ? resA : [];
+      series = Array.isArray(resS) ? resS : [];
+      tags = Array.isArray(resT) ? resT : [];
+      formats = Array.isArray(resF) ? resF : [];
     } catch (e) {
-      console.error(e);
+      console.error('Erro ao carregar catálogo:', e);
+      authors = [];
+      series = [];
+      tags = [];
+      formats = [];
     } finally {
       loading = false;
     }
@@ -38,13 +42,18 @@
   }
 
   function formatCount(item, singular, plural) {
+    if (!item) return `0 ${plural}`;
     const n = item.count !== undefined ? item.count : (item.book_count || 0);
     return `${n} ${n === 1 ? singular : plural}`;
   }
 
-  $: filteredAuthors = authors.filter(a => a.name.toLowerCase().includes(filterText.toLowerCase()));
-  $: filteredSeries = series.filter(s => s.name.toLowerCase().includes(filterText.toLowerCase()));
-  $: filteredTags = tags.filter(t => t.name.toLowerCase().includes(filterText.toLowerCase()));
+  $: filteredAuthors = (authors || []).filter(a => a && a.name && a.name.toLowerCase().includes((filterText || '').toLowerCase()));
+  $: filteredSeries = (series || []).filter(s => s && s.name && s.name.toLowerCase().includes((filterText || '').toLowerCase()));
+  $: filteredTags = (tags || []).filter(t => t && t.name && t.name.toLowerCase().includes((filterText || '').toLowerCase()));
+  $: filteredFormats = (formats || []).filter(f => {
+    const name = f ? (f.name || f.format || '') : '';
+    return name.toLowerCase().includes((filterText || '').toLowerCase());
+  });
 </script>
 
 <div class="browse-container">
@@ -63,7 +72,7 @@
         on:click={() => { activeSubTab = 'authors'; filterText = ''; }}>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"></path><circle cx="12" cy="7" r="4"></circle></svg>
         <span>Autores</span>
-        <span class="count-tag">{authors.length}</span>
+        <span class="count-tag">{authors ? authors.length : 0}</span>
       </button>
 
       <button 
@@ -72,7 +81,7 @@
         on:click={() => { activeSubTab = 'series'; filterText = ''; }}>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"></path></svg>
         <span>Séries</span>
-        <span class="count-tag">{series.length}</span>
+        <span class="count-tag">{series ? series.length : 0}</span>
       </button>
 
       <button 
@@ -81,7 +90,7 @@
         on:click={() => { activeSubTab = 'tags'; filterText = ''; }}>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z"></path><line x1="7" y1="7" x2="7.01" y2="7"></line></svg>
         <span>Categorias</span>
-        <span class="count-tag">{tags.length}</span>
+        <span class="count-tag">{tags ? tags.length : 0}</span>
       </button>
 
       <button 
@@ -90,21 +99,19 @@
         on:click={() => { activeSubTab = 'formats'; filterText = ''; }}>
         <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
         <span>Formatos</span>
-        <span class="count-tag">{formats.length}</span>
+        <span class="count-tag">{formats ? formats.length : 0}</span>
       </button>
     </div>
   </div>
 
   <!-- Filter Search Input -->
-  {#if activeSubTab !== 'formats'}
-    <div class="filter-box">
-      <input 
-        type="text" 
-        placeholder="Filtrar por nome..." 
-        bind:value={filterText} 
-      />
-    </div>
-  {/if}
+  <div class="filter-box">
+    <input 
+      type="text" 
+      placeholder="Filtrar por nome..." 
+      bind:value={filterText} 
+    />
+  </div>
 
   {#if loading}
     <div class="loading-state">
@@ -128,6 +135,10 @@
               <span class="entity-sub">{formatCount(a, 'livro', 'livros')}</span>
             </div>
           </div>
+        {:else}
+          <div class="empty-state">
+            <p>Nenhum autor encontrado.</p>
+          </div>
         {/each}
       {:else if activeSubTab === 'series'}
         {#each filteredSeries as s}
@@ -144,6 +155,10 @@
               <span class="entity-name">{s.name}</span>
               <span class="entity-sub">{formatCount(s, 'volume', 'volumes')}</span>
             </div>
+          </div>
+        {:else}
+          <div class="empty-state">
+            <p>Nenhuma série encontrada.</p>
           </div>
         {/each}
       {:else if activeSubTab === 'tags'}
@@ -162,9 +177,13 @@
               <span class="entity-sub">{formatCount(t, 'obra', 'obras')}</span>
             </div>
           </div>
+        {:else}
+          <div class="empty-state">
+            <p>Nenhuma categoria encontrada.</p>
+          </div>
         {/each}
       {:else if activeSubTab === 'formats'}
-        {#each formats as f}
+        {#each filteredFormats as f}
           <div 
             class="entity-card glass glass-hover" 
             on:click={() => selectItem('format', f)} 
@@ -176,6 +195,10 @@
               <span class="entity-name">{f.name || f.format}</span>
               <span class="entity-sub">{formatCount(f, 'ficheiro', 'ficheiros')}</span>
             </div>
+          </div>
+        {:else}
+          <div class="empty-state">
+            <p>Nenhum formato encontrado.</p>
           </div>
         {/each}
       {/if}
@@ -344,6 +367,16 @@
     text-align: center;
     padding: 60px;
     color: var(--text-secondary);
+  }
+  .empty-state {
+    grid-column: 1 / -1;
+    text-align: center;
+    padding: 48px;
+    color: var(--text-muted);
+    font-size: 14px;
+    background: rgba(255, 255, 255, 0.02);
+    border-radius: var(--radius-md);
+    border: 1px dashed rgba(255, 255, 255, 0.1);
   }
   .spinner {
     width: 32px;
