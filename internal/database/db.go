@@ -389,6 +389,13 @@ func (d *DB) ListBooks(ctx context.Context, f BookFilter) (*PageResult[Book], er
 		conditions = append(conditions, "brl.rating = ?")
 		args = append(args, f.RatingID)
 	}
+	if f.MinRating > 0 {
+		conditions = append(conditions, "EXISTS (SELECT 1 FROM books_ratings_link brl_m JOIN ratings r_m ON brl_m.rating = r_m.id WHERE brl_m.book = b.id AND r_m.rating >= ?)")
+		args = append(args, f.MinRating)
+	}
+	if f.NoCover {
+		conditions = append(conditions, "b.has_cover = 0")
+	}
 	if f.LanguageID > 0 {
 		conditions = append(conditions, "bll.lang_code = ?")
 		args = append(args, f.LanguageID)
@@ -1286,6 +1293,16 @@ func (d *DB) DeleteBook(ctx context.Context, id int64) error {
 			_, _ = tx.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s WHERE book = ?", t), id)
 		}
 		_, err := tx.ExecContext(ctx, "DELETE FROM books WHERE id = ?", id)
+		if err == nil && d.appPool != nil {
+			appTables := []string{"book_read_link", "archived_book", "book_shelf_link", "bookmark", "book_hashes"}
+			for _, at := range appTables {
+				col := "book_id"
+				if at == "bookmark" {
+					col = "book"
+				}
+				_, _ = d.appPool.ExecContext(ctx, fmt.Sprintf("DELETE FROM %s WHERE %s = ?", at, col), id)
+			}
+		}
 		return err
 	})
 }
@@ -2023,15 +2040,15 @@ func (d *DB) ListCustomShelves(ctx context.Context, userID int64) ([]Shelf, erro
 	return list, rows.Err()
 }
 
-// GetShelfBooks obtém os livros de uma estante.
-func (d *DB) GetShelfBooks(ctx context.Context, shelfID int64, sort string, page, pageSize int) (*PageResult[Book], error) {
+// GetShelfBooks obtém os livros de uma estante com suporte a UserID para estado de leitura.
+func (d *DB) GetShelfBooks(ctx context.Context, shelfID int64, userID int64, sort string, page, pageSize int) (*PageResult[Book], error) {
 	if d.appPool == nil {
-		return d.ListBooks(ctx, BookFilter{Page: page, PageSize: pageSize, Sort: sort})
+		return d.ListBooks(ctx, BookFilter{Page: page, PageSize: pageSize, Sort: sort, UserID: userID})
 	}
 
 	rows, err := d.appPool.QueryContext(ctx, "SELECT book_id FROM book_shelf_link WHERE shelf = ?", shelfID)
 	if err != nil {
-		return d.ListBooks(ctx, BookFilter{Page: page, PageSize: pageSize, Sort: sort})
+		return d.ListBooks(ctx, BookFilter{Page: page, PageSize: pageSize, Sort: sort, UserID: userID})
 	}
 	defer rows.Close()
 
@@ -2054,6 +2071,7 @@ func (d *DB) GetShelfBooks(ctx context.Context, shelfID int64, sort string, page
 		PageSize: pageSize,
 		Sort:     sort,
 		Search:   "",
+		UserID:   userID,
 	})
 }
 
@@ -2147,25 +2165,31 @@ func (d *DB) GetMagicShelfBooks(ctx context.Context, shelfID int64, userID int64
 	if strings.Contains(name, "Recently") || strings.Contains(rules, "newer_than") {
 		filter.Sort = "new"
 	} else if strings.Contains(name, "Highly") || strings.Contains(rules, "rating") {
-		filter.RatingID = 4 // 4 ou 5 estrelas
+		filter.MinRating = 8 // 4 ou 5 estrelas (ratings na tabela ratings valem 8 ou 10)
+	} else if strings.Contains(name, "Without Covers") || strings.Contains(rules, "has_cover") {
+		filter.NoCover = true
 	} else if strings.Contains(name, "Reading") || strings.Contains(rules, "reading") {
 		rows, err := d.appPool.QueryContext(ctx, `
 			SELECT DISTINCT CAST(document AS INTEGER) FROM kosync_progress WHERE user_id = ? AND percentage > 0 AND percentage < 99
 			UNION
 			SELECT DISTINCT book FROM bookmark WHERE user_id = ?
 		`, userID, userID)
-		if err == nil {
-			defer rows.Close()
-			var bookIDs []int64
-			for rows.Next() {
-				var bid int64
-				if err := rows.Scan(&bid); err == nil && bid > 0 {
-					bookIDs = append(bookIDs, bid)
-				}
-			}
-			_ = rows.Err()
-			filter.BookIDs = bookIDs
+		if err != nil {
+			return &PageResult[Book]{Items: []Book{}, TotalItems: 0, Page: page, PageSize: pageSize, TotalPages: 0}, nil
 		}
+		defer rows.Close()
+		var bookIDs []int64
+		for rows.Next() {
+			var bid int64
+			if err := rows.Scan(&bid); err == nil && bid > 0 {
+				bookIDs = append(bookIDs, bid)
+			}
+		}
+		_ = rows.Err()
+		if len(bookIDs) == 0 {
+			return &PageResult[Book]{Items: []Book{}, TotalItems: 0, Page: page, PageSize: pageSize, TotalPages: 0}, nil
+		}
+		filter.BookIDs = bookIDs
 	}
 
 	return d.ListBooks(ctx, filter)
@@ -2319,11 +2343,46 @@ func (d *DB) MergeBookRecords(ctx context.Context, targetID int64, sourceIDs []i
 			}
 		}
 
+		// Se o livro alvo não tem capa, mas a origem tinha capa, transfere a capa
+		if !target.HasCover && source.HasCover {
+			srcCover := filepath.Join(sourceDir, "cover.jpg")
+			dstCover := filepath.Join(targetDir, "cover.jpg")
+			if _, errStat := os.Stat(srcCover); errStat == nil {
+				if copyErr := copyFile(srcCover, dstCover); copyErr == nil {
+					target.HasCover = true
+					_ = d.SetBookHasCover(ctx, targetID, true)
+				}
+			}
+		}
+
 		// Remove o livro de origem do metadata.db e limpa a pasta física
 		_ = d.DeleteBook(ctx, sID)
 		_ = os.RemoveAll(sourceDir)
 	}
+
+	_ = d.ExecuteWrite(func(tx *sql.Tx) error {
+		_, err := tx.ExecContext(ctx, "UPDATE books SET last_modified = CURRENT_TIMESTAMP WHERE id = ?", targetID)
+		return err
+	})
+
 	return nil
+}
+
+func copyFile(src, dst string) error {
+	in, err := os.Open(src)
+	if err != nil {
+		return err
+	}
+	defer in.Close()
+
+	out, err := os.Create(dst)
+	if err != nil {
+		return err
+	}
+	defer out.Close()
+
+	_, err = io.Copy(out, in)
+	return err
 }
 
 // ReorderShelfBooks atualiza a ordem dos livros numa estante.

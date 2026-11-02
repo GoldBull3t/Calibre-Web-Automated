@@ -251,7 +251,11 @@ func (h *Handler) BrowseUniversal(w http.ResponseWriter, r *http.Request) {
 			if shelf != nil {
 				title = "Shelf: " + shelf.Name
 			}
-			res, err := h.db.GetShelfBooks(r.Context(), id, sortParam, page, 24)
+			userID := int64(1)
+			if u := h.CurrentUser(r); u != nil {
+				userID = u.ID
+			}
+			res, err := h.db.GetShelfBooks(r.Context(), id, userID, sortParam, page, 24)
 			if err == nil {
 				totalBooks, _, _, _ := h.db.GetStats(r.Context())
 				_ = h.gridTpl.ExecuteWriter(pongo2.Context{

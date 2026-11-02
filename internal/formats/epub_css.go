@@ -62,7 +62,6 @@ func SanitizeEPUB(epubPath, outputPath string) (int, error) {
 	if err != nil {
 		return 0, fmt.Errorf("falha ao abrir EPUB para sanitização: %w", err)
 	}
-	defer r.Close()
 
 	var buf bytes.Buffer
 	w := zip.NewWriter(&buf)
@@ -138,11 +137,13 @@ func SanitizeEPUB(epubPath, outputPath string) (int, error) {
 		_, _ = writer.Write(sanitizedData)
 	}
 
+	_ = r.Close()
+
 	if err := w.Close(); err != nil {
 		return 0, fmt.Errorf("falha ao fechar escritor ZIP: %w", err)
 	}
 
-	// Grava no ficheiro de saída
+	// Grava no ficheiro de saída (com reader já fechado, evitando conflitos de ficheiro aberto)
 	if err := os.WriteFile(outputPath, buf.Bytes(), 0644); err != nil {
 		return 0, fmt.Errorf("falha ao gravar EPUB sanitizado: %w", err)
 	}

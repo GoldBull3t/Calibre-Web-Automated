@@ -197,7 +197,7 @@
     runningConverter = true;
     actionMessage = 'A iniciar conversão de biblioteca em segundo plano...';
     try {
-      const res = await fetch('/api/convert/start');
+      const res = await fetch('/api/convert/start', { method: 'POST' });
       const data = await res.json();
       actionMessage = 'Conversão de biblioteca agendada com sucesso!';
     } catch (e) {

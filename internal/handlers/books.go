@@ -412,6 +412,39 @@ func (h *Handler) ReaderWeb(w http.ResponseWriter, r *http.Request) {
 		}
 	}
 
+	if !hasEPUB && !strings.EqualFold(format, "epub") && !strings.EqualFold(format, "kepub") {
+		w.Header().Set("Content-Type", "text/html; charset=utf-8")
+		fmt.Fprintf(w, `<!DOCTYPE html>
+<html lang="pt">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>%s — Leitor não suportado</title>
+  <style>
+    body { background: #0b0f19; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+    .card { background: rgba(30, 41, 59, 0.7); border: 1px solid rgba(255, 255, 255, 0.1); border-radius: 16px; padding: 32px; max-width: 480px; text-align: center; backdrop-filter: blur(16px); }
+    h2 { font-size: 18px; margin: 0 0 12px; }
+    p { font-size: 14px; color: #94a3b8; line-height: 1.5; margin: 0 0 24px; }
+    .btn-row { display: flex; gap: 12px; justify-content: center; }
+    .btn { display: inline-flex; align-items: center; gap: 6px; padding: 10px 18px; border-radius: 8px; font-size: 13px; font-weight: 600; text-decoration: none; cursor: pointer; border: none; }
+    .btn-primary { background: #0284c7; color: #fff; }
+    .btn-secondary { background: rgba(255, 255, 255, 0.08); color: #cbd5e1; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Formato .%s não suportado no navegador</h2>
+    <p>O livro <strong>%s</strong> apenas possui ficheiros no formato <strong>%s</strong>. Descarregue o ficheiro para o seu leitor dedicado ou use as ferramentas CWA para convertê-lo em EPUB.</p>
+    <div class="btn-row">
+      <a href="/download/%d" class="btn btn-primary" download>Descarregar Ficheiro</a>
+      <a href="/" class="btn btn-secondary">Voltar à Biblioteca</a>
+    </div>
+  </div>
+</body>
+</html>`, book.Title, strings.ToUpper(format), book.Title, strings.ToUpper(format), id)
+		return
+	}
+
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
 	var savedBookmark string
 	if u := h.CurrentUser(r); u != nil {
@@ -560,6 +593,9 @@ func (h *Handler) DeleteBook(w http.ResponseWriter, r *http.Request) {
 
 	book, _ := h.db.GetBookByID(r.Context(), id)
 	_ = h.db.DeleteBook(r.Context(), id)
+	if h.coverCache != nil {
+		h.coverCache.Delete(fmt.Sprintf("cover:%d", id))
+	}
 
 	if book != nil && book.Path != "" {
 		fullPath := filepath.Join(h.booksDir, filepath.FromSlash(book.Path))
@@ -1155,6 +1191,9 @@ func (h *Handler) DeleteSelectedBooks(w http.ResponseWriter, r *http.Request) {
 	for _, id := range payload.Selections {
 		book, _ := h.db.GetBookByID(r.Context(), id)
 		_ = h.db.DeleteBook(r.Context(), id)
+		if h.coverCache != nil {
+		h.coverCache.Delete(fmt.Sprintf("cover:%d", id))
+	}
 		if book != nil && book.Path != "" {
 			fullPath := filepath.Join(h.booksDir, filepath.FromSlash(book.Path))
 			_ = os.RemoveAll(fullPath)

@@ -147,22 +147,6 @@ func (w *Watcher) worker(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case filePath := <-w.jobs:
-			ext := strings.ToLower(filepath.Ext(filePath))
-			if ext == ".zip" {
-				// Auto-Zipper: descompacta livros do ZIP e descarta o arquivo compactado
-				extracted, err := formats.UnpackZip(filePath, w.ingestDir)
-				_ = os.Remove(filePath)
-				if err != nil {
-					log.Printf("[AUTO-ZIPPER ERROR] Falha ao descompactar %s: %v", filePath, err)
-				} else {
-					log.Printf("[AUTO-ZIPPER] %d livros extraídos de %s", len(extracted), filePath)
-					for _, ef := range extracted {
-						w.debounce(ef)
-					}
-				}
-				continue
-			}
-
 			if err := w.processFile(filePath); err != nil {
 				log.Printf("[INGEST ERROR] Falha ao processar %s: %v", filePath, err)
 			} else {

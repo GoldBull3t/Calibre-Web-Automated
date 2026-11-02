@@ -62,6 +62,8 @@ type BookFilter struct {
 	ReadStatus  int // 0 = all, 1 = read, 2 = unread
 	UserID      int64
 	BookIDs     []int64
+	NoCover     bool
+	MinRating   int
 }
 
 // EntityCount representa uma entidade (autor, série, categoria, formato, etc.) com contagem de livros.

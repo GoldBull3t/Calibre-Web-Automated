@@ -163,7 +163,7 @@
     sending = true;
     sendMsg = '';
     try {
-      const res = await fetch(`/send/${bookId}/${sendFormat.toLowerCase()}/0`, {
+      const res = await fetch(`/send/${bookId}/${sendFormat.toLowerCase()}/0?email=${encodeURIComponent(sendEmail.trim())}`, {
         method: 'POST'
       });
       if (res.ok) {

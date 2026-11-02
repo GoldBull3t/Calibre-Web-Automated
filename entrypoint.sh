@@ -27,9 +27,10 @@ if [ "$(id -u)" = "0" ]; then
         fi
     done
 
-    # Garante permissões na pasta library se for pasta nova
-    if [ -d "/library" ] && [ ! -f "/library/metadata.db" ]; then
+    # Garante permissões na pasta library e nas bases de dados SQLite (incluindo WAL e SHM)
+    if [ -d "/library" ]; then
         chown "$PUID:$PGID" /library 2>/dev/null || true
+        chown "$PUID:$PGID" /library/metadata.db* 2>/dev/null || true
     fi
 
     exec su-exec "$PUID:$PGID" /app/calibre-web-go "$@"

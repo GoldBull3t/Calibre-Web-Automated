@@ -424,7 +424,7 @@ func (h *Handler) APIGetBooks(w http.ResponseWriter, r *http.Request) {
 			}
 		}
 	} else if shelfID, _ := strconv.ParseInt(shelfParam, 10, 64); shelfID > 0 {
-		res, err := h.db.GetShelfBooks(r.Context(), shelfID, sort, page, limit)
+		res, err := h.db.GetShelfBooks(r.Context(), shelfID, userID, sort, page, limit)
 		if err == nil && res != nil {
 			_ = json.NewEncoder(w).Encode(map[string]any{
 				"total": res.TotalItems,
