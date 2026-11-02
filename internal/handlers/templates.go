@@ -1548,269 +1548,377 @@ const loginHTML = `<!DOCTYPE html>
 </html>`
 
 const readerHTML = `<!DOCTYPE html>
-<html lang="en">
+<html lang="pt">
 <head>
     <title>{{ title }} — CWA NextGen Reader</title>
     <meta charset="utf-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <link rel="apple-touch-icon" sizes="140x140" href="/static/favicon.ico">
     <link rel="shortcut icon" href="/static/favicon.ico">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&family=Literata:ital,opsz,wght@0,7..72,400;0,7..72,500;0,7..72,600;1,7..72,400&family=Merriweather:ital,wght@0,300;0,400;0,700;1,300&display=swap" rel="stylesheet">
     <script src="/static/js/libs/jquery.min.js"></script>
     <script src="/static/js/compress/jszip_epub.min.js"></script>
     <script src="/static/js/libs/epub.min.js"></script>
     <style>
         :root {
-            --bg-color: #121214;
-            --text-color: #e4e4e7;
-            --hud-bg: rgba(24, 24, 27, 0.88);
+            --bg-color: #0b0f19;
+            --text-color: #e2e8f0;
+            --hud-bg: rgba(15, 23, 42, 0.94);
             --border-color: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.16);
             --accent-color: #38bdf8;
-            --sidebar-bg: #18181b;
-            --btn-hover: rgba(255, 255, 255, 0.08);
-            --font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-            --font-size: 100%;
+            --accent-subtle: rgba(56, 189, 248, 0.12);
+            --sidebar-bg: #0f172a;
+            --surface-hover: rgba(255, 255, 255, 0.06);
+            --page-width: 860px;
+            --font-family: 'Literata', Georgia, Cambria, serif;
+            --safe-top: env(safe-area-inset-top, 0px);
+            --safe-bottom: env(safe-area-inset-bottom, 0px);
+            --safe-left: env(safe-area-inset-left, 0px);
+            --safe-right: env(safe-area-inset-right, 0px);
         }
 
         body[data-theme="dark"] {
-            --bg-color: #121214;
-            --text-color: #e4e4e7;
-            --hud-bg: rgba(24, 24, 27, 0.92);
-            --border-color: rgba(255, 255, 255, 0.1);
+            --bg-color: #0b0f19;
+            --text-color: #e2e8f0;
+            --hud-bg: rgba(15, 23, 42, 0.94);
+            --border-color: rgba(255, 255, 255, 0.08);
+            --border-hover: rgba(255, 255, 255, 0.16);
             --accent-color: #38bdf8;
-            --sidebar-bg: #18181b;
-            --btn-hover: rgba(255, 255, 255, 0.1);
+            --accent-subtle: rgba(56, 189, 248, 0.12);
+            --sidebar-bg: #0f172a;
+            --surface-hover: rgba(255, 255, 255, 0.06);
         }
 
         body[data-theme="oled"] {
             --bg-color: #000000;
             --text-color: #d1d5db;
-            --hud-bg: rgba(0, 0, 0, 0.95);
-            --border-color: rgba(255, 255, 255, 0.15);
+            --hud-bg: rgba(9, 9, 11, 0.96);
+            --border-color: rgba(255, 255, 255, 0.12);
+            --border-hover: rgba(255, 255, 255, 0.22);
             --accent-color: #38bdf8;
+            --accent-subtle: rgba(56, 189, 248, 0.12);
             --sidebar-bg: #09090b;
-            --btn-hover: rgba(255, 255, 255, 0.12);
+            --surface-hover: rgba(255, 255, 255, 0.08);
         }
 
         body[data-theme="sepia"] {
-            --bg-color: #f4ecd8;
-            --text-color: #423528;
-            --hud-bg: rgba(238, 228, 207, 0.95);
-            --border-color: rgba(66, 53, 40, 0.12);
-            --accent-color: #8b5cf6;
-            --sidebar-bg: #eae0c8;
-            --btn-hover: rgba(66, 53, 40, 0.08);
+            --bg-color: #fbf0d9;
+            --text-color: #3e3020;
+            --hud-bg: rgba(246, 235, 210, 0.95);
+            --border-color: rgba(62, 48, 32, 0.12);
+            --border-hover: rgba(62, 48, 32, 0.24);
+            --accent-color: #b45309;
+            --accent-subtle: rgba(180, 83, 9, 0.12);
+            --sidebar-bg: #f4e3be;
+            --surface-hover: rgba(62, 48, 32, 0.06);
         }
 
         body[data-theme="light"] {
-            --bg-color: #ffffff;
-            --text-color: #18181b;
-            --hud-bg: rgba(255, 255, 255, 0.94);
+            --bg-color: #f8fafc;
+            --text-color: #0f172a;
+            --hud-bg: rgba(255, 255, 255, 0.95);
             --border-color: rgba(0, 0, 0, 0.08);
+            --border-hover: rgba(0, 0, 0, 0.16);
             --accent-color: #0284c7;
-            --sidebar-bg: #f8fafc;
-            --btn-hover: rgba(0, 0, 0, 0.05);
+            --accent-subtle: rgba(2, 132, 199, 0.1);
+            --sidebar-bg: #ffffff;
+            --surface-hover: rgba(0, 0, 0, 0.05);
         }
 
         * { box-sizing: border-box; }
-        body, html {
+        html, body {
             margin: 0; padding: 0; width: 100%; height: 100%;
             overflow: hidden; background: var(--bg-color); color: var(--text-color);
-            font-family: var(--font-family); user-select: none;
+            font-family: var(--font-family); user-select: none; -webkit-user-select: none;
             transition: background-color 0.25s ease, color 0.25s ease;
         }
 
         /* Top HUD */
         #top-hud {
-            position: fixed; top: 0; left: 0; right: 0; height: 54px;
-            background: var(--hud-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            position: fixed; top: 0; left: 0; right: 0;
+            padding-top: var(--safe-top);
+            height: calc(52px + var(--safe-top));
+            background: var(--hud-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
             border-bottom: 1px solid var(--border-color); display: flex; align-items: center;
-            justify-content: space-between; padding: 0 16px; z-index: 50;
-            transition: transform 0.25s ease, opacity 0.25s ease;
+            justify-content: space-between; padding-left: max(16px, var(--safe-left)); padding-right: max(16px, var(--safe-right));
+            z-index: 60; transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s ease;
         }
-        #top-hud.hidden { transform: translateY(-100%); opacity: 0; pointer-events: none; }
+        #top-hud.is-hidden { transform: translateY(-100%); opacity: 0; pointer-events: none; }
 
-        .hud-left, .hud-right { display: flex; align-items: center; gap: 8px; }
+        .hud-left, .hud-right { display: flex; align-items: center; gap: 6px; }
         .hud-center {
             position: absolute; left: 50%; transform: translateX(-50%);
             display: flex; flex-direction: column; align-items: center;
-            max-width: 45%; pointer-events: none;
+            max-width: 44%; pointer-events: none; text-align: center;
         }
-        .hud-book-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
-        .hud-chapter-title { font-size: 11px; opacity: 0.7; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 100%; }
+        .hud-book-title {
+            font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden;
+            text-overflow: ellipsis; max-width: 100%; letter-spacing: -0.01em;
+        }
+        .hud-chapter-title {
+            font-size: 11px; opacity: 0.65; white-space: nowrap; overflow: hidden;
+            text-overflow: ellipsis; max-width: 100%; margin-top: 1px;
+        }
 
         .btn-icon {
             background: transparent; border: 1px solid transparent; color: var(--text-color);
-            border-radius: 8px; width: 36px; height: 36px; display: inline-flex; align-items: center;
+            border-radius: 8px; width: 34px; height: 34px; display: inline-flex; align-items: center;
             justify-content: center; cursor: pointer; transition: all 0.15s ease; text-decoration: none;
+            padding: 0; flex-shrink: 0;
         }
-        .btn-icon:hover { background: var(--btn-hover); border-color: var(--border-color); }
-        .btn-icon svg { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
+        .btn-icon:hover { background: var(--surface-hover); border-color: var(--border-color); }
+        .btn-icon.active { background: var(--accent-subtle); border-color: var(--accent-color); color: var(--accent-color); }
+        .btn-icon svg { width: 17px; height: 17px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
 
         .sync-badge {
-            font-size: 11px; padding: 3px 8px; border-radius: 12px; background: rgba(56, 189, 248, 0.15);
+            font-size: 11px; padding: 2px 7px; border-radius: 9999px; background: var(--accent-subtle);
             color: var(--accent-color); font-weight: 500; display: inline-flex; align-items: center; gap: 4px;
-            transition: opacity 0.3s;
+            transition: all 0.2s ease;
         }
-        .sync-badge.saved { background: rgba(34, 197, 94, 0.15); color: #22c55e; }
+        .sync-badge.saved { background: rgba(34, 197, 94, 0.14); color: #22c55e; }
 
-        /* Viewer area */
+        /* Viewer container & Layout */
         #viewer-container {
-            position: absolute; top: 0; bottom: 0; left: 0; right: 0;
+            position: absolute; inset: 0;
             display: flex; align-items: center; justify-content: center;
+            overflow: hidden;
+        }
+        #viewer-wrapper {
+            width: 100%; height: 100%;
+            max-width: var(--page-width);
+            margin: 0 auto; position: relative;
+            transition: max-width 0.2s ease;
         }
         #viewer {
             width: 100%; height: 100%;
-            max-width: 1400px; margin: 0 auto;
         }
 
-        /* Click/Tap Navigation Zones */
-        .tap-zone {
-            position: absolute; top: 54px; bottom: 44px; width: 18%; z-index: 20;
-            cursor: pointer; opacity: 0; transition: opacity 0.2s;
+        /* Continuous scroll mode adjustments */
+        body.mode-scroll #viewer-container {
+            overflow-y: auto; overflow-x: hidden; -webkit-overflow-scrolling: touch;
+        }
+        body.mode-scroll #viewer-wrapper {
+            height: auto; min-height: 100%;
+        }
+
+        /* Floating Nav Chevrons (Desktop) */
+        .edge-nav {
+            position: fixed; top: 50%; transform: translateY(-50%); width: 48px; height: 72px;
+            display: flex; align-items: center; justify-content: center; z-index: 40;
+            cursor: pointer; opacity: 0; transition: opacity 0.2s ease, transform 0.15s ease;
+            color: var(--text-color); border: none; background: transparent; padding: 0;
+        }
+        .edge-nav:hover { opacity: 0.85; transform: translateY(-50%) scale(1.05); }
+        .edge-nav-inner {
+            width: 38px; height: 38px; border-radius: 50%;
+            background: var(--hud-bg); border: 1px solid var(--border-color);
             display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.3);
         }
-        .tap-zone:hover { opacity: 1; }
-        .tap-prev { left: 0; }
-        .tap-next { right: 0; }
-        .tap-btn {
-            background: var(--hud-bg); color: var(--text-color); border: 1px solid var(--border-color);
-            border-radius: 50%; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center;
-            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        .edge-nav-prev { left: 16px; }
+        .edge-nav-next { right: 16px; }
+        @media (max-width: 768px) {
+            .edge-nav { display: none !important; }
         }
 
-        /* Bottom Floating HUD */
+        /* Bottom Floating Progress HUD */
         #bottom-hud {
-            position: fixed; bottom: 0; left: 0; right: 0; height: 44px;
-            background: var(--hud-bg); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+            position: fixed; bottom: 0; left: 0; right: 0;
+            padding-bottom: var(--safe-bottom);
+            height: calc(48px + var(--safe-bottom));
+            background: var(--hud-bg); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
             border-top: 1px solid var(--border-color); display: flex; align-items: center;
-            justify-content: space-between; padding: 0 20px; z-index: 50; font-size: 12px;
-            transition: transform 0.25s ease, opacity 0.25s ease;
+            justify-content: space-between; padding-left: max(18px, var(--safe-left)); padding-right: max(18px, var(--safe-right));
+            z-index: 60; font-size: 12px; transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s ease;
         }
-        #bottom-hud.hidden { transform: translateY(100%); opacity: 0; pointer-events: none; }
+        #bottom-hud.is-hidden { transform: translateY(100%); opacity: 0; pointer-events: none; }
 
-        .progress-bar-wrap {
-            flex: 1; max-width: 500px; height: 4px; background: rgba(255,255,255,0.1);
-            border-radius: 2px; margin: 0 16px; overflow: hidden; position: relative; cursor: pointer;
+        .progress-section {
+            flex: 1; max-width: 560px; display: flex; align-items: center; gap: 12px; margin: 0 16px;
         }
-        .progress-bar-fill {
-            height: 100%; background: var(--accent-color); width: 0%;
-            transition: width 0.3s ease;
+        .progress-track {
+            flex: 1; height: 6px; background: rgba(255, 255, 255, 0.12);
+            border-radius: 9999px; position: relative; cursor: pointer; padding: 6px 0;
+            background-clip: content-box;
+        }
+        .progress-fill {
+            height: 6px; background: var(--accent-color); width: 0%;
+            border-radius: 9999px; transition: width 0.15s ease; pointer-events: none;
+        }
+        .progress-thumb {
+            position: absolute; top: 3px; width: 12px; height: 12px; border-radius: 50%;
+            background: #ffffff; box-shadow: 0 1px 4px rgba(0,0,0,0.5); transform: translateX(-50%);
+            display: none; pointer-events: none;
+        }
+        .progress-track:hover .progress-thumb { display: block; }
+
+        .reading-metric {
+            font-size: 11px; font-variant-numeric: tabular-nums; opacity: 0.75; white-space: nowrap;
         }
 
-        /* Left Drawer (Table of Contents) */
-        #toc-drawer {
-            position: fixed; top: 0; bottom: 0; left: 0; width: 340px; max-width: 85vw;
+        /* Unified Drawer (Table of Contents, Search, Bookmarks) */
+        #reader-drawer {
+            position: fixed; top: 0; bottom: 0; left: 0; width: 380px; max-width: 90vw;
             background: var(--sidebar-bg); border-right: 1px solid var(--border-color);
             z-index: 100; transform: translateX(-100%); transition: transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
-            display: flex; flex-direction: column; box-shadow: 4px 0 24px rgba(0,0,0,0.4);
+            display: flex; flex-direction: column; box-shadow: 6px 0 28px rgba(0,0,0,0.45);
         }
-        #toc-drawer.open { transform: translateX(0); }
-        .drawer-header {
-            padding: 16px; border-bottom: 1px solid var(--border-color);
-            display: flex; align-items: center; justify-content: space-between;
-        }
-        .drawer-header h3 { margin: 0; font-size: 15px; font-weight: 600; }
-        .toc-search {
-            padding: 10px 16px; border-bottom: 1px solid var(--border-color);
-        }
-        .toc-search input {
-            width: 100%; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border-color);
-            border-radius: 6px; padding: 8px 12px; color: var(--text-color); font-size: 13px; outline: none;
-        }
-        .toc-list {
-            flex: 1; overflow-y: auto; padding: 8px 0; margin: 0; list-style: none;
-        }
-        .toc-item {
-            padding: 10px 18px; font-size: 13px; cursor: pointer; border-left: 3px solid transparent;
-            transition: background 0.15s, border-color 0.15s; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-        }
-        .toc-item:hover { background: var(--btn-hover); }
-        .toc-item.active { border-color: var(--accent-color); color: var(--accent-color); font-weight: 600; background: rgba(56, 189, 248, 0.08); }
+        #reader-drawer.open { transform: translateX(0); }
 
-        /* Settings Popover */
+        .drawer-header {
+            padding: 12px 16px; border-bottom: 1px solid var(--border-color);
+            display: flex; align-items: center; justify-content: space-between; gap: 8px;
+            padding-top: max(12px, var(--safe-top));
+        }
+        .drawer-tabs {
+            display: flex; align-items: center; gap: 4px; background: rgba(255, 255, 255, 0.05);
+            padding: 3px; border-radius: 8px; flex: 1;
+        }
+        .drawer-tab {
+            flex: 1; border: none; background: transparent; color: var(--text-color);
+            font-size: 12px; font-weight: 500; padding: 6px 8px; border-radius: 6px;
+            cursor: pointer; text-align: center; transition: all 0.15s; opacity: 0.7;
+        }
+        .drawer-tab.active { background: var(--hud-bg); opacity: 1; font-weight: 600; color: var(--accent-color); }
+
+        .drawer-content { flex: 1; overflow-y: auto; display: none; padding: 12px 0; }
+        .drawer-content.active { display: block; }
+
+        .drawer-search-box {
+            padding: 8px 16px 12px; border-bottom: 1px solid var(--border-color);
+            display: flex; gap: 8px; align-items: center;
+        }
+        .drawer-search-input {
+            flex: 1; background: rgba(255, 255, 255, 0.06); border: 1px solid var(--border-color);
+            border-radius: 8px; padding: 7px 12px; color: var(--text-color); font-size: 13px; outline: none;
+            transition: border-color 0.15s;
+        }
+        .drawer-search-input:focus { border-color: var(--accent-color); }
+
+        .toc-list, .bookmarks-list, .search-results-list {
+            list-style: none; margin: 0; padding: 0;
+        }
+        .toc-item, .bookmark-item, .search-item {
+            padding: 10px 18px; font-size: 13px; cursor: pointer; border-left: 3px solid transparent;
+            transition: background 0.15s, border-color 0.15s;
+        }
+        .toc-item:hover, .bookmark-item:hover, .search-item:hover { background: var(--surface-hover); }
+        .toc-item.active { border-color: var(--accent-color); color: var(--accent-color); font-weight: 600; background: var(--accent-subtle); }
+
+        .search-item-snippet {
+            font-size: 12px; opacity: 0.8; margin-top: 4px; line-height: 1.4;
+        }
+        .search-item-snippet mark {
+            background: rgba(56, 189, 248, 0.3); color: inherit; padding: 1px 3px; border-radius: 2px;
+        }
+        .bookmark-actions {
+            display: flex; align-items: center; justify-content: space-between; font-size: 11px; opacity: 0.6; margin-top: 4px;
+        }
+
+        .drawer-empty-state {
+            padding: 36px 20px; text-align: center; opacity: 0.6; font-size: 13px;
+        }
+
+        /* Settings Popover (Aa) */
         #settings-popover {
-            position: fixed; top: 60px; right: 16px; width: 320px;
+            position: fixed; top: calc(56px + var(--safe-top)); right: max(16px, var(--safe-right)); width: 330px;
             background: var(--sidebar-bg); border: 1px solid var(--border-color);
-            border-radius: 12px; padding: 18px; z-index: 100; display: none;
-            box-shadow: 0 12px 32px rgba(0,0,0,0.4); animation: fadeIn 0.15s ease;
+            border-radius: 14px; padding: 18px; z-index: 100; display: none;
+            box-shadow: 0 16px 40px rgba(0,0,0,0.45); animation: popoverFadeIn 0.15s ease;
         }
         #settings-popover.open { display: block; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
+        @keyframes popoverFadeIn { from { opacity: 0; transform: translateY(-8px); } to { opacity: 1; transform: translateY(0); } }
 
-        .settings-section { margin-bottom: 16px; }
-        .settings-label { font-size: 11px; text-transform: uppercase; letter-spacing: 0.05em; opacity: 0.7; margin-bottom: 8px; font-weight: 600; }
-        .theme-buttons { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
-        .theme-btn {
-            padding: 8px 4px; border-radius: 6px; border: 1px solid var(--border-color);
-            cursor: pointer; font-size: 11px; font-weight: 500; text-align: center; background: rgba(255,255,255,0.04);
-            color: var(--text-color); transition: all 0.15s;
+        .settings-row { margin-bottom: 16px; }
+        .settings-row:last-child { margin-bottom: 0; }
+        .settings-title {
+            font-size: 11px; text-transform: uppercase; letter-spacing: 0.06em; opacity: 0.65;
+            margin-bottom: 8px; font-weight: 600;
         }
-        .theme-btn.active { border-color: var(--accent-color); background: rgba(56, 189, 248, 0.15); color: var(--accent-color); }
-        .font-btn-row { display: flex; gap: 8px; margin-top: 6px; }
-        .font-size-ctrl {
+        .pill-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; }
+        .pill-btn {
+            padding: 7px 4px; border-radius: 7px; border: 1px solid var(--border-color);
+            cursor: pointer; font-size: 11px; font-weight: 500; text-align: center;
+            background: rgba(255, 255, 255, 0.04); color: var(--text-color); transition: all 0.15s;
+        }
+        .pill-btn:hover { background: var(--surface-hover); border-color: var(--border-hover); }
+        .pill-btn.active { border-color: var(--accent-color); background: var(--accent-subtle); color: var(--accent-color); font-weight: 600; }
+
+        .stepper-ctrl {
             display: flex; align-items: center; justify-content: space-between;
-            background: rgba(255,255,255,0.05); border: 1px solid var(--border-color);
-            border-radius: 8px; padding: 4px 12px;
+            background: rgba(255, 255, 255, 0.04); border: 1px solid var(--border-color);
+            border-radius: 8px; padding: 3px 8px;
         }
-        .ctrl-btn {
-            background: transparent; border: none; color: var(--text-color); font-size: 16px;
-            font-weight: bold; cursor: pointer; padding: 4px 10px; border-radius: 4px;
+        .stepper-btn {
+            background: transparent; border: none; color: var(--text-color); font-size: 14px;
+            font-weight: 600; cursor: pointer; padding: 4px 10px; border-radius: 6px;
         }
-        .ctrl-btn:hover { background: var(--btn-hover); }
+        .stepper-btn:hover { background: var(--surface-hover); }
 
         /* Backdrop overlay */
         #backdrop {
-            position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 90;
-            display: none; backdrop-filter: blur(2px);
+            position: fixed; inset: 0; background: rgba(0, 0, 0, 0.55); z-index: 80;
+            display: none; backdrop-filter: blur(2px); -webkit-backdrop-filter: blur(2px);
         }
         #backdrop.open { display: block; }
 
-        /* Loading Spinner */
-        #loading {
+        /* Loading / Error Screen */
+        #loading-screen {
             position: fixed; inset: 0; display: flex; flex-direction: column;
             align-items: center; justify-content: center; background: var(--bg-color); z-index: 200;
+            transition: opacity 0.25s ease;
         }
-        .spinner {
-            width: 40px; height: 40px; border: 3px solid rgba(56, 189, 248, 0.2);
+        .spinner-ring {
+            width: 38px; height: 38px; border: 3px solid rgba(56, 189, 248, 0.18);
             border-top-color: var(--accent-color); border-radius: 50%;
-            animation: spin 0.8s linear infinite;
+            animation: spin 0.75s linear infinite;
         }
         @keyframes spin { to { transform: rotate(360deg); } }
     </style>
 </head>
 <body data-theme="dark">
     <!-- Loading Screen -->
-    <div id="loading">
-        <div class="spinner"></div>
-        <p style="margin-top: 16px; font-size: 14px; opacity: 0.8;">A carregar livro...</p>
+    <div id="loading-screen">
+        <div class="spinner-ring"></div>
+        <p id="loading-text" style="margin-top: 16px; font-size: 13px; opacity: 0.8;">A carregar livro...</p>
     </div>
 
     <!-- Backdrop -->
     <div id="backdrop"></div>
 
-    <!-- Top Toolbar HUD -->
+    <!-- Top HUD -->
     <header id="top-hud">
         <div class="hud-left">
             <a href="/" class="btn-icon" title="Voltar à Biblioteca">
                 <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
             </a>
-            <button id="btn-toc" class="btn-icon" title="Índice (T)">
+            <button id="btn-open-toc" class="btn-icon" title="Índice & Pesquisa (T)">
                 <svg viewBox="0 0 24 24"><path d="M4 6h16M4 12h16M4 18h7"/></svg>
             </button>
-            <span id="sync-status" class="sync-badge">
-                <svg viewBox="0 0 24 24" width="12" height="12"><path d="M20 6L9 17l-5-5"/></svg>
-                <span>A sincronizar</span>
+            <button id="btn-bookmark" class="btn-icon" title="Guardar Marcador (B)">
+                <svg viewBox="0 0 24 24"><path d="M19 21l-7-5-7 5V5a2 2 0 0 1 2-2h10a2 2 0 0 1 2 2z"/></svg>
+            </button>
+            <span id="sync-status" class="sync-badge" style="margin-left: 4px;">
+                <svg viewBox="0 0 24 24" width="11" height="11"><path d="M20 6L9 17l-5-5"/></svg>
+                <span>Pronto</span>
             </span>
         </div>
 
         <div class="hud-center">
             <span class="hud-book-title">{{ title }}</span>
-            <span id="hud-chapter" class="hud-chapter-title">A carregar capítulo...</span>
+            <span id="hud-chapter" class="hud-chapter-title">A inicializar...</span>
         </div>
 
         <div class="hud-right">
-            <button id="btn-settings" class="btn-icon" title="Definições de Leitura (S)">
-                <svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            <button id="btn-toggle-flow" class="btn-icon" title="Alternar Modo Paginado / Scroll Contínuo (M)">
+                <svg id="icon-flow-paginated" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+                <svg id="icon-flow-scroll" viewBox="0 0 24 24" style="display:none;"><path d="M12 3v18M8 7l4-4 4 4M8 17l4 4 4-4"/></svg>
+            </button>
+            <button id="btn-settings" class="btn-icon" title="Tipografia e Aspeto (Aa)">
+                <svg viewBox="0 0 24 24"><path d="M4 20h16M14 4l-4 12m-2-5h5"/></svg>
             </button>
             <button id="btn-fullscreen" class="btn-icon" title="Ecrã Completo (F)">
                 <svg viewBox="0 0 24 24"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
@@ -1818,81 +1926,157 @@ const readerHTML = `<!DOCTYPE html>
         </div>
     </header>
 
-    <!-- Table of Contents Drawer -->
-    <aside id="toc-drawer">
+    <!-- Unified Reader Drawer (TOC, Search, Bookmarks) -->
+    <aside id="reader-drawer">
         <div class="drawer-header">
-            <h3>Índice do Livro</h3>
-            <button id="btn-close-toc" class="btn-icon">
+            <div class="drawer-tabs">
+                <button class="drawer-tab active" data-tab="toc">Índice</button>
+                <button class="drawer-tab" data-tab="search">Pesquisa</button>
+                <button class="drawer-tab" data-tab="bookmarks">Marcadores</button>
+            </div>
+            <button id="btn-close-drawer" class="btn-icon" title="Fechar (Esc)">
                 <svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg>
             </button>
         </div>
-        <div class="toc-search">
-            <input type="text" id="toc-filter" placeholder="Pesquisar capítulos...">
+
+        <!-- Tab 1: TOC -->
+        <div id="tab-content-toc" class="drawer-content active">
+            <div class="drawer-search-box">
+                <input type="text" id="toc-filter-input" class="drawer-search-input" placeholder="Filtrar capítulos...">
+            </div>
+            <ul id="toc-list" class="toc-list"></ul>
         </div>
-        <ul id="toc-list" class="toc-list"></ul>
+
+        <!-- Tab 2: In-Book Search -->
+        <div id="tab-content-search" class="drawer-content">
+            <div class="drawer-search-box">
+                <input type="text" id="book-search-input" class="drawer-search-input" placeholder="Pesquisar texto no livro...">
+                <button id="btn-run-search" class="btn-icon active" style="width:30px; height:30px;" title="Pesquisar">
+                    <svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="M21 21l-4.35-4.35"/></svg>
+                </button>
+            </div>
+            <div id="search-status-bar" style="padding: 6px 16px; font-size: 11px; opacity: 0.6; display: none;"></div>
+            <ul id="search-results-list" class="search-results-list"></ul>
+        </div>
+
+        <!-- Tab 3: Bookmarks -->
+        <div id="tab-content-bookmarks" class="drawer-content">
+            <div style="padding: 8px 16px 12px; border-bottom: 1px solid var(--border-color);">
+                <button id="btn-add-bookmark-drawer" class="pill-btn active" style="width:100%; padding: 8px; font-size: 12px;">+ Guardar Posição Atual</button>
+            </div>
+            <ul id="bookmarks-list" class="bookmarks-list"></ul>
+        </div>
     </aside>
 
-    <!-- Settings Popover -->
+    <!-- Settings Popover (Aa) -->
     <div id="settings-popover">
-        <div class="settings-section">
-            <div class="settings-label">Tema de Leitura</div>
-            <div class="theme-buttons">
-                <button class="theme-btn active" data-theme-val="dark">Dark</button>
-                <button class="theme-btn" data-theme-val="oled">OLED</button>
-                <button class="theme-btn" data-theme-val="sepia">Sepia</button>
-                <button class="theme-btn" data-theme-val="light">Light</button>
+        <!-- Theme row -->
+        <div class="settings-row">
+            <div class="settings-title">Tema de Leitura</div>
+            <div class="pill-grid">
+                <button class="pill-btn active" data-theme-btn="dark">Dark</button>
+                <button class="pill-btn" data-theme-btn="oled">OLED</button>
+                <button class="pill-btn" data-theme-btn="sepia">Sépia</button>
+                <button class="pill-btn" data-theme-btn="light">Light</button>
             </div>
         </div>
 
-        <div class="settings-section">
-            <div class="settings-label">Tipo de Letra</div>
-            <div class="font-btn-row">
-                <button class="theme-btn active" data-font-val="sans" style="flex:1;">Sans</button>
-                <button class="theme-btn" data-font-val="serif" style="flex:1;">Serif</button>
-                <button class="theme-btn" data-font-val="dyslexic" style="flex:1;">Dyslexic</button>
+        <!-- Font Family -->
+        <div class="settings-row">
+            <div class="settings-title">Tipo de Letra</div>
+            <div class="pill-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <button class="pill-btn active" data-font-btn="literata">Literata</button>
+                <button class="pill-btn" data-font-btn="inter">Inter Sans</button>
+                <button class="pill-btn" data-font-btn="merriweather">Merriweather</button>
+            </div>
+            <div class="pill-grid" style="grid-template-columns: repeat(2, 1fr); margin-top: 6px;">
+                <button class="pill-btn" data-font-btn="mono">Mono</button>
+                <button class="pill-btn" data-font-btn="dyslexic">OpenDyslexic</button>
             </div>
         </div>
 
-        <div class="settings-section">
-            <div class="settings-label">Tamanho de Letra</div>
-            <div class="font-size-ctrl">
-                <button id="font-decrease" class="ctrl-btn">A-</button>
-                <span id="font-size-label" style="font-size: 13px; font-weight: 600;">100%</span>
-                <button id="font-increase" class="ctrl-btn">A+</button>
+        <!-- Font Size -->
+        <div class="settings-row">
+            <div class="settings-title">Tamanho da Letra</div>
+            <div class="stepper-ctrl">
+                <button id="btn-font-dec" class="stepper-btn">A−</button>
+                <span id="font-size-display" style="font-size: 12px; font-weight: 600;">100%</span>
+                <button id="btn-font-inc" class="stepper-btn">A+</button>
             </div>
         </div>
 
-        <div class="settings-section" style="margin-bottom: 0;">
-            <div class="settings-label">Disposição de Página</div>
-            <div class="font-btn-row">
-                <button class="theme-btn active" id="btn-spread-auto" style="flex:1;">Auto</button>
-                <button class="theme-btn" id="btn-spread-single" style="flex:1;">Uma Coluna</button>
+        <!-- Line Height -->
+        <div class="settings-row">
+            <div class="settings-title">Espaçamento de Linha</div>
+            <div class="pill-grid" style="grid-template-columns: repeat(3, 1fr);">
+                <button class="pill-btn" data-lh-btn="1.35">Compacto</button>
+                <button class="pill-btn active" data-lh-btn="1.6">Normal</button>
+                <button class="pill-btn" data-lh-btn="1.9">Amplo</button>
+            </div>
+        </div>
+
+        <!-- Page Width / Margins -->
+        <div class="settings-row">
+            <div class="settings-title">Largura da Página</div>
+            <div class="pill-grid">
+                <button class="pill-btn" data-width-btn="680px">Estreita</button>
+                <button class="pill-btn active" data-width-btn="860px">Normal</button>
+                <button class="pill-btn" data-width-btn="1040px">Ampla</button>
+                <button class="pill-btn" data-width-btn="100%">Total</button>
+            </div>
+        </div>
+
+        <!-- Text Alignment -->
+        <div class="settings-row">
+            <div class="settings-title">Alinhamento</div>
+            <div class="pill-grid" style="grid-template-columns: repeat(2, 1fr);">
+                <button class="pill-btn active" data-align-btn="justify">Justificado</button>
+                <button class="pill-btn" data-align-btn="left">À Esquerda</button>
             </div>
         </div>
     </div>
 
-    <!-- Viewer & Tap Navigation Zones -->
+    <!-- Viewer & Navigation -->
     <main id="viewer-container">
-        <div id="viewer"></div>
-        <div class="tap-zone tap-prev" id="tap-prev" title="Página Anterior (Seta Esquerda)">
-            <div class="tap-btn">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M15 18l-6-6 6-6"/></svg>
-            </div>
+        <div id="viewer-wrapper">
+            <div id="viewer"></div>
         </div>
-        <div class="tap-zone tap-next" id="tap-next" title="Página Seguinte (Seta Direita / Espaço)">
-            <div class="tap-btn">
-                <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 18l6-6-6-6"/></svg>
+        <!-- Edge Chevrons (Desktop) -->
+        <button class="edge-nav edge-nav-prev" id="edge-prev" title="Página Anterior">
+            <div class="edge-nav-inner">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M15 18l-6-6 6-6"/></svg>
             </div>
-        </div>
+        </button>
+        <button class="edge-nav edge-nav-next" id="edge-next" title="Página Seguinte">
+            <div class="edge-nav-inner">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M9 18l6-6-6-6"/></svg>
+            </div>
+        </button>
     </main>
 
-    <!-- Bottom Floating Progress HUD -->
+    <!-- Bottom HUD -->
     <footer id="bottom-hud">
-        <span id="reading-chapter-bottom" style="opacity: 0.7; max-width: 25%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">Início</span>
-        <div class="progress-bar-wrap" id="progress-bar-track">
-            <div class="progress-bar-fill" id="progress-bar-fill"></div>
+        <div style="display: flex; align-items: center; gap: 8px; max-width: 32%;">
+            <button id="btn-prev-chapter" class="btn-icon" style="width:28px; height:28px;" title="Capítulo Anterior">
+                <svg viewBox="0 0 24 24"><path d="M11 19l-7-7 7-7m8 14l-7-7 7-7"/></svg>
+            </button>
+            <span id="reading-chapter-bottom" style="opacity: 0.8; font-size: 11px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">Início</span>
         </div>
-        <span id="reading-percentage" style="font-weight: 600; min-width: 48px; text-align: right;">0%</span>
+
+        <div class="progress-section">
+            <div class="progress-track" id="progress-track" title="Navegar no livro">
+                <div class="progress-fill" id="progress-fill"></div>
+                <div class="progress-thumb" id="progress-thumb"></div>
+            </div>
+        </div>
+
+        <div style="display: flex; align-items: center; gap: 8px;">
+            <span id="reading-time-left" class="reading-metric">~...</span>
+            <span id="reading-percentage" class="reading-metric" style="font-weight: 600; min-width: 36px; text-align: right;">0%</span>
+            <button id="btn-next-chapter" class="btn-icon" style="width:28px; height:28px;" title="Próximo Capítulo">
+                <svg viewBox="0 0 24 24"><path d="M13 5l7 7-7 7M5 5l7 7-7 7"/></svg>
+            </button>
+        </div>
     </footer>
 
     <script>
@@ -1902,160 +2086,356 @@ const readerHTML = `<!DOCTYPE html>
 
         let book = null;
         let rendition = null;
-        let currentFontSize = parseInt(localStorage.getItem("cwa_reader_font_size") || "100", 10);
-        let currentTheme = localStorage.getItem("cwa_reader_theme") || "dark";
-        let currentFont = localStorage.getItem("cwa_reader_font") || "sans";
-        let syncTimeout = null;
         let tocData = [];
+        let syncTimeout = null;
+        let hudTimer = null;
+        let hudLocked = false;
 
-        // Apply saved theme
-        applyTheme(currentTheme);
+        // User Reading Preferences with robust defaults
+        let currentTheme = localStorage.getItem("cwa_reader_theme") || "dark";
+        let currentFont = localStorage.getItem("cwa_reader_font") || "literata";
+        let currentFontSize = parseInt(localStorage.getItem("cwa_reader_font_size") || "100", 10);
+        let currentLineHeight = localStorage.getItem("cwa_reader_lh") || "1.6";
+        let currentPageWidth = localStorage.getItem("cwa_reader_width") || "860px";
+        let currentTextAlign = localStorage.getItem("cwa_reader_align") || "justify";
+        let currentFlow = localStorage.getItem("cwa_reader_flow") || "paginated"; // 'paginated' or 'scrolled-doc'
 
+        // Apply theme & width immediately to avoid flash
+        document.body.setAttribute("data-theme", currentTheme);
+        document.documentElement.style.setProperty("--page-width", currentPageWidth);
+        updateFlowIcon();
+
+        // Loading Screen Helpers
         function hideLoading() {
-            const loader = document.getElementById("loading");
+            const loader = document.getElementById("loading-screen");
             if (loader) {
                 loader.style.opacity = "0";
-                loader.style.transition = "opacity 0.25s ease";
-                setTimeout(() => { loader.style.display = "none"; }, 260);
+                setTimeout(function() { loader.style.display = "none"; }, 260);
             }
         }
 
         function showLoadingError(msg) {
-            const loader = document.getElementById("loading");
+            const loader = document.getElementById("loading-screen");
             if (loader) {
-                loader.innerHTML = '<div style="text-align:center; padding:32px; max-width:440px; background:rgba(255,255,255,0.05); border:1px solid rgba(255,255,255,0.12); border-radius:16px; backdrop-filter:blur(16px); box-shadow:0 20px 40px rgba(0,0,0,0.5);">' +
+                loader.innerHTML = '<div style="text-align:center; padding:32px 24px; max-width:440px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:16px; backdrop-filter:blur(16px);">' +
                     '<div style="font-size:36px; margin-bottom:12px;">\u26a0\ufe0f</div>' +
                     '<h3 style="color:#ef4444; margin:0 0 8px; font-size:18px; font-weight:600;">Falha ao abrir livro</h3>' +
-                    '<p style="opacity:0.75; font-size:13px; line-height:1.5; margin:0 0 20px;">' + (msg || "Ficheiro inacess\u00edvel") + '</p>' +
-                    '<a href="/" style="display:inline-block; padding:10px 22px; background:linear-gradient(135deg, #6366f1, #4f46e5); color:#fff; border-radius:8px; text-decoration:none; font-size:13px; font-weight:600;">Voltar \u00e0 Biblioteca</a>' +
+                    '<p style="opacity:0.75; font-size:13px; line-height:1.5; margin:0 0 20px;">' + (msg || "Ficheiro inacess\u00edvel ou formato inv\u00e1lido.") + '</p>' +
+                    '<a href="/" style="display:inline-block; padding:10px 22px; background:#0284c7; color:#fff; border-radius:8px; text-decoration:none; font-size:13px; font-weight:600;">Voltar \u00e0 Biblioteca</a>' +
                     '</div>';
             }
         }
 
-        // Theme and Style rules
-        function getThemeRules(theme) {
-            if (theme === "dark") return { body: { background: "#121214 !important", color: "#e4e4e7 !important" } };
-            if (theme === "oled") return { body: { background: "#000000 !important", color: "#d1d5db !important" } };
-            if (theme === "sepia") return { body: { background: "#f4ecd8 !important", color: "#423528 !important" } };
-            return { body: { background: "#ffffff !important", color: "#18181b !important" } };
+        // Font family resolver
+        function getFontFamilyString(key) {
+            if (key === "inter") return "'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif";
+            if (key === "merriweather") return "'Merriweather', Georgia, serif";
+            if (key === "mono") return "'JetBrains Mono', Consolas, Menlo, monospace";
+            if (key === "dyslexic") return "'OpenDyslexic', 'Comic Sans MS', sans-serif";
+            return "'Literata', Georgia, Cambria, serif";
         }
 
-        // Initialize ePub by fetching binary ArrayBuffer directly into memory
+        function getThemeBg(t) {
+            if (t === "oled") return "#000000";
+            if (t === "sepia") return "#fbf0d9";
+            if (t === "light") return "#f8fafc";
+            return "#0b0f19";
+        }
+
+        function getThemeFg(t) {
+            if (t === "oled") return "#d1d5db";
+            if (t === "sepia") return "#3e3020";
+            if (t === "light") return "#0f172a";
+            return "#e2e8f0";
+        }
+
+        function applyRenditionStyles() {
+            if (!rendition) return;
+            const bg = getThemeBg(currentTheme);
+            const fg = getThemeFg(currentTheme);
+            const font = getFontFamilyString(currentFont);
+
+            const rules = {
+                "body": {
+                    "background-color": bg + " !important",
+                    "color": fg + " !important",
+                    "font-family": font + " !important",
+                    "font-size": currentFontSize + "% !important",
+                    "line-height": currentLineHeight + " !important",
+                    "text-align": currentTextAlign + " !important",
+                    "padding": currentFlow === "scrolled-doc" ? "24px 20px 80px 20px !important" : "0 14px !important",
+                    "-webkit-font-smoothing": "antialiased"
+                },
+                "p": {
+                    "line-height": currentLineHeight + " !important",
+                    "margin-bottom": "0.85em !important",
+                    "text-align": currentTextAlign + " !important"
+                },
+                "a": {
+                    "color": (currentTheme === "sepia" ? "#b45309" : "#38bdf8") + " !important"
+                },
+                "img": {
+                    "max-width": "100% !important",
+                    "height": "auto !important",
+                    "display": "block !important",
+                    "margin": "14px auto !important"
+                }
+            };
+
+            rendition.themes.default(rules);
+            if (rendition.views && rendition.views()) {
+                rendition.views().forEach(function(view) {
+                    if (view && view.pane) view.pane.render();
+                });
+            }
+        }
+
+        // HUD Visibility Controls
+        function showHUD() {
+            document.getElementById("top-hud").classList.remove("is-hidden");
+            document.getElementById("bottom-hud").classList.remove("is-hidden");
+            resetHUDTimer();
+        }
+
+        function hideHUD() {
+            if (hudLocked) return;
+            document.getElementById("top-hud").classList.add("is-hidden");
+            document.getElementById("bottom-hud").classList.add("is-hidden");
+        }
+
+        function toggleHUD() {
+            const isHidden = document.getElementById("top-hud").classList.contains("is-hidden");
+            if (isHidden) showHUD();
+            else hideHUD();
+        }
+
+        function resetHUDTimer() {
+            clearTimeout(hudTimer);
+            if (!hudLocked) {
+                hudTimer = setTimeout(function() {
+                    hideHUD();
+                }, 4000);
+            }
+        }
+
+        // Attach touch and click handlers inside epub iframe
+        function bindRenditionHooks() {
+            if (!rendition) return;
+
+            rendition.hooks.content.register(function(contents) {
+                const doc = contents.document;
+                if (!doc) return;
+
+                let startX = 0;
+                let startY = 0;
+                let startTime = 0;
+
+                doc.addEventListener("touchstart", function(e) {
+                    if (e.touches.length === 1) {
+                        startX = e.touches[0].clientX;
+                        startY = e.touches[0].clientY;
+                        startTime = Date.now();
+                    }
+                }, { passive: true });
+
+                doc.addEventListener("touchend", function(e) {
+                    if (e.changedTouches.length === 1) {
+                        const diffX = e.changedTouches[0].clientX - startX;
+                        const diffY = e.changedTouches[0].clientY - startY;
+                        const duration = Date.now() - startTime;
+
+                        // Horizontal swipe detection (> 45px, duration < 500ms, mostly horizontal)
+                        if (Math.abs(diffX) > 45 && Math.abs(diffX) > Math.abs(diffY) * 1.5 && duration < 500) {
+                            if (currentFlow === "paginated") {
+                                if (diffX < 0) rendition.next();
+                                else rendition.prev();
+                                return;
+                            }
+                        }
+                    }
+                }, { passive: true });
+
+                doc.addEventListener("click", function(e) {
+                    // Ignore clicks on links
+                    if (e.target && e.target.closest("a")) return;
+
+                    // If user is selecting text, do not flip or toggle HUD
+                    const sel = doc.getSelection();
+                    if (sel && sel.toString().trim().length > 0) return;
+
+                    const width = doc.documentElement.clientWidth || window.innerWidth;
+                    const x = e.clientX;
+
+                    if (currentFlow === "paginated") {
+                        if (x < width * 0.25) {
+                            rendition.prev();
+                        } else if (x > width * 0.75) {
+                            rendition.next();
+                        } else {
+                            toggleHUD();
+                        }
+                    } else {
+                        toggleHUD();
+                    }
+                });
+
+                // Mouse move inside iframe resets HUD timer if near edges
+                doc.addEventListener("mousemove", function(e) {
+                    if (e.clientY < 70 || e.clientY > window.innerHeight - 60) {
+                        showHUD();
+                    }
+                });
+            });
+        }
+
+        // Render book engine
+        function initRendition(targetCfi) {
+            if (rendition) {
+                try { rendition.destroy(); } catch(e) {}
+                const viewerEl = document.getElementById("viewer");
+                if (viewerEl) viewerEl.innerHTML = "";
+            }
+
+            document.body.classList.toggle("mode-scroll", currentFlow === "scrolled-doc");
+            const spreadMode = window.innerWidth > 1050 ? "auto" : "none";
+
+            rendition = book.renderTo("viewer", {
+                width: "100%",
+                height: "100%",
+                spread: currentFlow === "scrolled-doc" ? "none" : spreadMode,
+                flow: currentFlow === "scrolled-doc" ? "scrolled-doc" : "paginated"
+            });
+
+            applyRenditionStyles();
+            bindRenditionHooks();
+            rendition.on("relocated", onRelocated);
+
+            if (targetCfi) {
+                return rendition.display(targetCfi);
+            } else {
+                return rendition.display();
+            }
+        }
+
+        // Fetch Book Binary
         fetch(EPUB_URL)
-            .then(res => {
+            .then(function(res) {
                 if (!res.ok) throw new Error("Erro HTTP " + res.status + " ao carregar ficheiro EPUB.");
                 return res.arrayBuffer();
             })
-            .then(buffer => {
+            .then(function(buffer) {
                 if (!buffer || buffer.byteLength === 0) {
-                    throw new Error("O ficheiro do livro está vazio ou inacessível.");
+                    throw new Error("O ficheiro do livro est\u00e1 vazio ou inacess\u00edvel.");
                 }
                 book = ePub(buffer);
-                rendition = book.renderTo("viewer", {
-                    width: "100%",
-                    height: "100%",
-                    spread: window.innerWidth > 900 ? "auto" : "none",
-                    flow: "paginated"
-                });
 
-                rendition.themes.register("dark", getThemeRules("dark"));
-                rendition.themes.register("oled", getThemeRules("oled"));
-                rendition.themes.register("sepia", getThemeRules("sepia"));
-                rendition.themes.register("light", getThemeRules("light"));
-                applyTheme(currentTheme);
-                applyFont(currentFont);
-                updateFontSize();
-
-                // Load Table of Contents
-                book.loaded.navigation.then(nav => {
+                // Load Navigation & TOC
+                book.loaded.navigation.then(function(nav) {
                     tocData = nav.toc || [];
                     renderTOC(tocData);
-                }).catch(e => console.warn("TOC loading error:", e));
+                }).catch(function(e) { console.warn("TOC loading error:", e); });
 
-                // Relocated handler
-                rendition.on("relocated", onRelocated);
-
-                // Initial display: Check saved progress first
+                // Check saved progress from API or bookmark
                 return fetch("/api/reader/progress/" + BOOK_ID)
-                    .then(r => r.json())
-                    .then(data => {
-                        if (data && data.progress && data.progress.length > 5) {
-                            return rendition.display(data.progress);
-                        } else if (INITIAL_BOOKMARK) {
-                            return rendition.display(INITIAL_BOOKMARK);
-                        }
-                        return rendition.display();
+                    .then(function(r) { return r.json(); })
+                    .then(function(data) {
+                        const savedTarget = (data && data.progress && data.progress.length > 5) ? data.progress : INITIAL_BOOKMARK;
+                        return initRendition(savedTarget);
                     })
-                    .catch(() => {
-                        if (INITIAL_BOOKMARK) return rendition.display(INITIAL_BOOKMARK);
-                        return rendition.display();
+                    .catch(function() {
+                        return initRendition(INITIAL_BOOKMARK || null);
                     });
             })
-            .then(() => {
+            .then(function() {
                 hideLoading();
-                // Asynchronously generate locations in background after UI is visible
-                setTimeout(() => {
+                resetHUDTimer();
+                renderBookmarksList();
+
+                // Generate locations asynchronously in background for scrubbing & metrics
+                setTimeout(function() {
                     if (book && book.locations) {
-                        book.locations.generate(1024).catch(() => {});
+                        book.locations.generate(1024).then(function() {
+                            updateMetrics();
+                        }).catch(function() {});
                     }
-                }, 800);
+                }, 600);
             })
-            .catch(err => {
+            .catch(function(err) {
                 console.error("Reader init error:", err);
-                showLoadingError(err.message || "Erro desconhecido ao renderizar EPUB.");
+                showLoadingError(err.message || "Erro ao renderizar o livro.");
             });
 
-        // Relocated event callback
+        // Relocated Event Handler
         function onRelocated(location) {
             if (!location || !location.start) return;
             const cfi = location.start.cfi;
-            let pct = 0;
-            if (book && book.locations && book.locations.total > 0) {
-                pct = Math.round(book.locations.percentageFromCfi(cfi) * 100);
-            }
+            updateMetrics(cfi);
 
-            // Update Progress HUD
-            const bar = document.getElementById("progress-bar-fill");
-            const pctLabel = document.getElementById("reading-percentage");
-            if (bar) bar.style.width = pct + "%";
-            if (pctLabel) pctLabel.textContent = pct + "%";
-
-            // Update Chapter Title
+            // Update Chapter labels
             if (location.start.href) {
                 const found = findChapterByHref(location.start.href, tocData);
                 if (found) {
-                    const ch = document.getElementById("hud-chapter");
-                    const chB = document.getElementById("reading-chapter-bottom");
-                    if (ch) ch.textContent = found.label.trim();
-                    if (chB) chB.textContent = found.label.trim();
+                    const label = found.label ? found.label.trim() : "Capítulo";
+                    document.getElementById("hud-chapter").textContent = label;
+                    document.getElementById("reading-chapter-bottom").textContent = label;
                     highlightActiveTOC(found.href);
                 }
             }
 
-            // Debounced Save
-            saveProgressDebounced(cfi, pct);
+            // Save Progress Debounced
+            saveProgressDebounced(cfi);
         }
 
-        function saveProgressDebounced(cfi, pct) {
-            updateSyncBadge(false, "A guardar...");
+        function updateMetrics(cfi) {
+            let pct = 0;
+            if (!cfi && rendition && rendition.location && rendition.location.start) {
+                cfi = rendition.location.start.cfi;
+            }
+
+            if (book && book.locations && book.locations.total > 0 && cfi) {
+                pct = Math.round(book.locations.percentageFromCfi(cfi) * 100) || 0;
+                pct = Math.max(0, Math.min(100, pct));
+
+                // Calculate Reading Time Remaining (~220 words per minute)
+                const totalLocs = book.locations.total;
+                const currentLoc = book.locations.locationFromCfi(cfi) || 0;
+                const locsLeft = Math.max(0, totalLocs - currentLoc);
+                const minutesLeft = Math.ceil((locsLeft * 140) / 220);
+
+                let timeStr = "";
+                if (minutesLeft >= 60) {
+                    const h = Math.floor(minutesLeft / 60);
+                    const m = minutesLeft % 60;
+                    timeStr = "~" + h + "h " + m + "m";
+                } else if (minutesLeft > 0) {
+                    timeStr = "~" + minutesLeft + " min";
+                } else {
+                    timeStr = "Fim";
+                }
+                document.getElementById("reading-time-left").textContent = timeStr;
+            }
+
+            document.getElementById("progress-fill").style.width = pct + "%";
+            document.getElementById("reading-percentage").textContent = pct + "%";
+        }
+
+        // Save Progress API
+        function saveProgressDebounced(cfi) {
+            updateSyncBadge(false, "A guardar");
             clearTimeout(syncTimeout);
-            syncTimeout = setTimeout(() => {
+            syncTimeout = setTimeout(function() {
+                let pct = 0;
+                if (book && book.locations && book.locations.total > 0) {
+                    pct = Math.round(book.locations.percentageFromCfi(cfi) * 100);
+                }
                 fetch("/api/reader/progress/" + BOOK_ID, {
                     method: "POST",
                     headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({
-                        progress: cfi,
-                        percentage: pct,
-                        device: "Web Reader"
-                    })
+                    body: JSON.stringify({ progress: cfi, percentage: pct, device: "CWA Web Reader" })
                 })
-                .then(r => r.json())
-                .then(() => {
-                    updateSyncBadge(true, "Sincronizado");
-                })
-                .catch(() => {
-                    updateSyncBadge(false, "Erro ao guardar");
-                });
+                .then(function(r) { return r.json(); })
+                .then(function() { updateSyncBadge(true, "Guardado"); })
+                .catch(function() { updateSyncBadge(false, "Offline"); });
             }, 600);
         }
 
@@ -2065,42 +2445,54 @@ const readerHTML = `<!DOCTYPE html>
             badge.querySelector("span").textContent = text;
         }
 
-        // TOC Helpers
+        // Interactive Progress Scrubber Click & Drag
+        const progressTrack = document.getElementById("progress-track");
+        progressTrack.addEventListener("click", function(e) {
+            if (!book || !book.locations || book.locations.total === 0 || !rendition) return;
+            const rect = progressTrack.getBoundingClientRect();
+            const ratio = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+            const cfi = book.locations.cfiFromPercentage(ratio);
+            if (cfi) rendition.display(cfi);
+        });
+
+        // Table of Contents
         function renderTOC(items) {
             const list = document.getElementById("toc-list");
             list.innerHTML = "";
-            items.forEach(item => {
-                const li = document.createElement("li");
-                li.className = "toc-item";
-                li.textContent = item.label.trim();
-                li.dataset.href = item.href;
-                li.addEventListener("click", () => {
-                    rendition.display(item.href);
-                    closeDrawers();
-                });
-                list.appendChild(li);
-                if (item.subitems && item.subitems.length) {
-                    item.subitems.forEach(sub => {
-                        const subLi = document.createElement("li");
-                        subLi.className = "toc-item";
-                        subLi.style.paddingLeft = "32px";
-                        subLi.textContent = sub.label.trim();
-                        subLi.dataset.href = sub.href;
-                        subLi.addEventListener("click", () => {
-                            rendition.display(sub.href);
-                            closeDrawers();
-                        });
-                        list.appendChild(subLi);
+            if (!items || items.length === 0) {
+                list.innerHTML = '<li class="drawer-empty-state">Nenhum capítulo encontrado no índice.</li>';
+                return;
+            }
+
+            function addItems(itemArray, depth) {
+                itemArray.forEach(function(item) {
+                    const li = document.createElement("li");
+                    li.className = "toc-item";
+                    li.dataset.href = item.href;
+                    li.style.paddingLeft = (18 + depth * 14) + "px";
+                    li.textContent = item.label ? item.label.trim() : "Sem título";
+                    li.addEventListener("click", function() {
+                        if (rendition) rendition.display(item.href);
+                        closeDrawers();
                     });
-                }
-            });
+                    list.appendChild(li);
+
+                    if (item.subitems && item.subitems.length) {
+                        addItems(item.subitems, depth + 1);
+                    }
+                });
+            }
+
+            addItems(items, 0);
         }
 
         function findChapterByHref(href, items) {
-            for (let item of items) {
-                if (href.includes(item.href) || item.href.includes(href)) return item;
-                if (item.subitems && item.subitems.length) {
-                    const sub = findChapterByHref(href, item.subitems);
+            if (!items) return null;
+            for (let i = 0; i < items.length; i++) {
+                const it = items[i];
+                if (href.indexOf(it.href) !== -1 || it.href.indexOf(href) !== -1) return it;
+                if (it.subitems && it.subitems.length) {
+                    const sub = findChapterByHref(href, it.subitems);
                     if (sub) return sub;
                 }
             }
@@ -2108,8 +2500,8 @@ const readerHTML = `<!DOCTYPE html>
         }
 
         function highlightActiveTOC(href) {
-            document.querySelectorAll(".toc-item").forEach(el => {
-                if (el.dataset.href && (href.includes(el.dataset.href) || el.dataset.href.includes(href))) {
+            document.querySelectorAll(".toc-item").forEach(function(el) {
+                if (el.dataset.href && (href.indexOf(el.dataset.href) !== -1 || el.dataset.href.indexOf(href) !== -1)) {
                     el.classList.add("active");
                 } else {
                     el.classList.remove("active");
@@ -2118,53 +2510,202 @@ const readerHTML = `<!DOCTYPE html>
         }
 
         // TOC Filter
-        document.getElementById("toc-filter").addEventListener("input", function(e) {
-            const term = e.target.value.toLowerCase();
-            document.querySelectorAll(".toc-item").forEach(el => {
-                el.style.display = el.textContent.toLowerCase().includes(term) ? "" : "none";
+        document.getElementById("toc-filter-input").addEventListener("input", function(e) {
+            const term = e.target.value.toLowerCase().trim();
+            document.querySelectorAll(".toc-item").forEach(function(el) {
+                el.style.display = el.textContent.toLowerCase().indexOf(term) !== -1 ? "" : "none";
             });
         });
 
-        // Theme management
+        // In-Book Full-Text Search
+        let isSearching = false;
+        async function runBookSearch() {
+            const input = document.getElementById("book-search-input");
+            const query = input.value.trim();
+            if (!book || query.length < 2 || isSearching) return;
+
+            isSearching = true;
+            const resultsList = document.getElementById("search-results-list");
+            const statusBar = document.getElementById("search-status-bar");
+            statusBar.style.display = "block";
+            statusBar.textContent = "A pesquisar...";
+            resultsList.innerHTML = '<li class="drawer-empty-state"><div class="spinner-ring" style="width:24px; height:24px; margin:0 auto 10px;"></div>A pesquisar no livro...</li>';
+
+            try {
+                const results = [];
+                const spineItems = book.spine.spineItems;
+
+                for (let i = 0; i < spineItems.length; i++) {
+                    const item = spineItems[i];
+                    await item.load(book.load.bind(book));
+                    const found = item.find(query);
+                    item.unload();
+
+                    if (found && found.length) {
+                        const ch = findChapterByHref(item.href, tocData);
+                        const chName = ch ? ch.label.trim() : ("Capítulo " + (i + 1));
+                        found.forEach(function(f) {
+                            results.push({ cfi: f.cfi, excerpt: f.excerpt, chapter: chName });
+                        });
+                    }
+                    if (results.length >= 60) break; // performance limit
+                }
+
+                statusBar.textContent = results.length + " ocorrências encontradas";
+                resultsList.innerHTML = "";
+
+                if (results.length === 0) {
+                    resultsList.innerHTML = '<li class="drawer-empty-state">Nenhum resultado para "' + query + '".</li>';
+                } else {
+                    results.forEach(function(res) {
+                        const li = document.createElement("li");
+                        li.className = "search-item";
+                        const escapedQuery = query.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+                        const highlighted = res.excerpt.replace(new RegExp("(" + escapedQuery + ")", "gi"), "<mark>$1</mark>");
+                        li.innerHTML = '<div style="font-weight:600; font-size:12px; color:var(--accent-color);">' + res.chapter + '</div>' +
+                            '<div class="search-item-snippet">' + highlighted + '</div>';
+                        li.addEventListener("click", function() {
+                            if (rendition) rendition.display(res.cfi);
+                            closeDrawers();
+                        });
+                        resultsList.appendChild(li);
+                    });
+                }
+            } catch (err) {
+                resultsList.innerHTML = '<li class="drawer-empty-state">Erro na pesquisa do livro.</li>';
+            } finally {
+                isSearching = false;
+            }
+        }
+
+        document.getElementById("btn-run-search").addEventListener("click", runBookSearch);
+        document.getElementById("book-search-input").addEventListener("keydown", function(e) {
+            if (e.key === "Enter") runBookSearch();
+        });
+
+        // Bookmarks Management
+        function getBookmarksKey() { return "cwa_bookmarks_" + BOOK_ID; }
+
+        function loadBookmarks() {
+            try {
+                return JSON.parse(localStorage.getItem(getBookmarksKey()) || "[]");
+            } catch(e) { return []; }
+        }
+
+        function saveBookmarks(arr) {
+            localStorage.setItem(getBookmarksKey(), JSON.stringify(arr));
+            renderBookmarksList();
+        }
+
+        function addCurrentBookmark() {
+            if (!rendition || !rendition.location || !rendition.location.start) return;
+            const cfi = rendition.location.start.cfi;
+            const chTitle = document.getElementById("hud-chapter").textContent || "Página";
+            const pct = document.getElementById("reading-percentage").textContent || "0%";
+            const bookmarks = loadBookmarks();
+
+            // Avoid duplicate CFI bookmark
+            if (!bookmarks.some(function(b) { return b.cfi === cfi; })) {
+                bookmarks.unshift({
+                    cfi: cfi,
+                    title: chTitle,
+                    percentage: pct,
+                    date: new Date().toLocaleDateString("pt-PT", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" })
+                });
+                saveBookmarks(bookmarks);
+                updateSyncBadge(true, "Marcador adicionado");
+            }
+        }
+
+        function removeBookmark(index) {
+            const bookmarks = loadBookmarks();
+            bookmarks.splice(index, 1);
+            saveBookmarks(bookmarks);
+        }
+
+        function renderBookmarksList() {
+            const list = document.getElementById("bookmarks-list");
+            const bookmarks = loadBookmarks();
+            list.innerHTML = "";
+
+            if (bookmarks.length === 0) {
+                list.innerHTML = '<li class="drawer-empty-state">Nenhum marcador guardado neste livro.<br><small style="opacity:0.6;">Clica no ícone 📑 no topo para marcar páginas.</small></li>';
+                return;
+            }
+
+            bookmarks.forEach(function(b, idx) {
+                const li = document.createElement("li");
+                li.className = "bookmark-item";
+                li.innerHTML = '<div style="display:flex; justify-content:space-between; align-items:center;">' +
+                    '<span style="font-weight:600; font-size:13px;">' + b.title + '</span>' +
+                    '<button class="btn-icon" data-del-bm="' + idx + '" style="width:24px; height:24px; opacity:0.6;" title="Eliminar marcador">' +
+                    '<svg viewBox="0 0 24 24"><path d="M18 6L6 18M6 6l12 12"/></svg></button>' +
+                    '</div>' +
+                    '<div class="bookmark-actions"><span>' + b.percentage + ' lido</span><span>' + b.date + '</span></div>';
+
+                li.querySelector("[data-del-bm]").addEventListener("click", function(e) {
+                    e.stopPropagation();
+                    removeBookmark(idx);
+                });
+
+                li.addEventListener("click", function() {
+                    if (rendition) rendition.display(b.cfi);
+                    closeDrawers();
+                });
+                list.appendChild(li);
+            });
+        }
+
+        document.getElementById("btn-bookmark").addEventListener("click", addCurrentBookmark);
+        document.getElementById("btn-add-bookmark-drawer").addEventListener("click", addCurrentBookmark);
+
+        // Drawer Navigation Tabs
+        document.querySelectorAll(".drawer-tab").forEach(function(btn) {
+            btn.addEventListener("click", function() {
+                const tab = btn.dataset.tab;
+                document.querySelectorAll(".drawer-tab").forEach(function(b) { b.classList.toggle("active", b === btn); });
+                document.querySelectorAll(".drawer-content").forEach(function(c) {
+                    c.classList.toggle("active", c.id === "tab-content-" + tab);
+                });
+            });
+        });
+
+        // Settings (Aa) Management
         function applyTheme(theme) {
             document.body.setAttribute("data-theme", theme);
             currentTheme = theme;
             localStorage.setItem("cwa_reader_theme", theme);
-            document.querySelectorAll(".theme-btn[data-theme-val]").forEach(b => {
-                b.classList.toggle("active", b.dataset.themeVal === theme);
+            document.querySelectorAll("[data-theme-btn]").forEach(function(b) {
+                b.classList.toggle("active", b.dataset.themeBtn === theme);
             });
-            if (rendition) rendition.themes.select(theme);
+            applyRenditionStyles();
         }
 
-        document.querySelectorAll(".theme-btn[data-theme-val]").forEach(btn => {
-            btn.addEventListener("click", () => applyTheme(btn.dataset.themeVal));
+        document.querySelectorAll("[data-theme-btn]").forEach(function(btn) {
+            btn.addEventListener("click", function() { applyTheme(btn.dataset.themeBtn); });
         });
 
-        // Font Family
         function applyFont(font) {
             currentFont = font;
             localStorage.setItem("cwa_reader_font", font);
-            document.querySelectorAll(".theme-btn[data-font-val]").forEach(b => {
-                b.classList.toggle("active", b.dataset.fontVal === font);
+            document.querySelectorAll("[data-font-btn]").forEach(function(b) {
+                b.classList.toggle("active", b.dataset.fontBtn === font);
             });
-            let fontFamily = "-apple-system, BlinkMacSystemFont, Segoe UI, Roboto, sans-serif";
-            if (font === "serif") fontFamily = "Merriweather, Georgia, Cambria, serif";
-            if (font === "dyslexic") fontFamily = "OpenDyslexic, Comic Sans MS, sans-serif";
-            if (rendition) rendition.themes.font(fontFamily);
+            applyRenditionStyles();
         }
 
-        document.querySelectorAll(".theme-btn[data-font-val]").forEach(btn => {
-            btn.addEventListener("click", () => applyFont(btn.dataset.fontVal));
+        document.querySelectorAll("[data-font-btn]").forEach(function(btn) {
+            btn.addEventListener("click", function() { applyFont(btn.dataset.fontBtn); });
         });
 
-        // Font Size
-        document.getElementById("font-increase").addEventListener("click", () => {
-            if (currentFontSize < 250) {
+        // Font Size Controls
+        document.getElementById("btn-font-inc").addEventListener("click", function() {
+            if (currentFontSize < 220) {
                 currentFontSize += 10;
                 updateFontSize();
             }
         });
-        document.getElementById("font-decrease").addEventListener("click", () => {
+        document.getElementById("btn-font-dec").addEventListener("click", function() {
             if (currentFontSize > 70) {
                 currentFontSize -= 10;
                 updateFontSize();
@@ -2172,76 +2713,194 @@ const readerHTML = `<!DOCTYPE html>
         });
 
         function updateFontSize() {
-            document.getElementById("font-size-label").textContent = currentFontSize + "%";
+            document.getElementById("font-size-display").textContent = currentFontSize + "%";
             localStorage.setItem("cwa_reader_font_size", currentFontSize);
-            if (rendition) rendition.themes.fontSize(currentFontSize + "%");
+            applyRenditionStyles();
         }
-        updateFontSize();
 
-        // Spread Toggle
-        document.getElementById("btn-spread-auto").addEventListener("click", function() {
-            this.classList.add("active");
-            document.getElementById("btn-spread-single").classList.remove("active");
-            rendition.spread("auto");
-        });
-        document.getElementById("btn-spread-single").addEventListener("click", function() {
-            this.classList.add("active");
-            document.getElementById("btn-spread-auto").classList.remove("active");
-            rendition.spread("none");
+        // Line Height Controls
+        document.querySelectorAll("[data-lh-btn]").forEach(function(btn) {
+            btn.addEventListener("click", function() {
+                currentLineHeight = btn.dataset.lhBtn;
+                localStorage.setItem("cwa_reader_lh", currentLineHeight);
+                document.querySelectorAll("[data-lh-btn]").forEach(function(b) { b.classList.toggle("active", b === btn); });
+                applyRenditionStyles();
+            });
         });
 
-        // Navigation
-        document.getElementById("tap-prev").addEventListener("click", () => rendition.prev());
-        document.getElementById("tap-next").addEventListener("click", () => rendition.next());
-
-        // Keyboard Shortcuts
-        document.addEventListener("keydown", e => {
-            if (e.target.tagName === "INPUT") return;
-            if (e.key === "ArrowLeft" || e.key === "j" || e.key === "PageUp") { rendition.prev(); }
-            else if (e.key === "ArrowRight" || e.key === "k" || e.key === " " || e.key === "PageDown") { rendition.next(); }
-            else if (e.key === "t" || e.key === "T") { toggleTOC(); }
-            else if (e.key === "s" || e.key === "S") { toggleSettings(); }
-            else if (e.key === "f" || e.key === "F") { toggleFullscreen(); }
-            else if (e.key === "Escape") { closeDrawers(); }
+        // Page Width Controls
+        document.querySelectorAll("[data-width-btn]").forEach(function(btn) {
+            btn.addEventListener("click", function() {
+                currentPageWidth = btn.dataset.widthBtn;
+                localStorage.setItem("cwa_reader_width", currentPageWidth);
+                document.documentElement.style.setProperty("--page-width", currentPageWidth);
+                document.querySelectorAll("[data-width-btn]").forEach(function(b) { b.classList.toggle("active", b === btn); });
+                if (rendition) {
+                    setTimeout(function() { rendition.resize(); }, 150);
+                }
+            });
         });
 
-        // Drawer & Popover toggles
-        const drawer = document.getElementById("toc-drawer");
+        // Text Alignment Controls
+        document.querySelectorAll("[data-align-btn]").forEach(function(btn) {
+            btn.addEventListener("click", function() {
+                currentTextAlign = btn.dataset.alignBtn;
+                localStorage.setItem("cwa_reader_align", currentTextAlign);
+                document.querySelectorAll("[data-align-btn]").forEach(function(b) { b.classList.toggle("active", b === btn); });
+                applyRenditionStyles();
+            });
+        });
+
+        // Reading Flow Toggle (Paginated vs Scroll Contínuo)
+        function toggleFlowMode() {
+            currentFlow = currentFlow === "paginated" ? "scrolled-doc" : "paginated";
+            localStorage.setItem("cwa_reader_flow", currentFlow);
+            updateFlowIcon();
+
+            if (rendition) {
+                const curLoc = rendition.currentLocation();
+                const cfi = (curLoc && curLoc.start) ? curLoc.start.cfi : null;
+                initRendition(cfi);
+            }
+        }
+
+        function updateFlowIcon() {
+            const isPaginated = currentFlow === "paginated";
+            document.getElementById("icon-flow-paginated").style.display = isPaginated ? "block" : "none";
+            document.getElementById("icon-flow-scroll").style.display = isPaginated ? "none" : "block";
+            const btn = document.getElementById("btn-toggle-flow");
+            btn.title = isPaginated ? "Mudar para Scroll Cont\u00ednuo (M)" : "Mudar para Modo Paginado (M)";
+        }
+
+        document.getElementById("btn-toggle-flow").addEventListener("click", toggleFlowMode);
+
+        // Chapter Next / Prev buttons
+        function goToChapterOffset(offset) {
+            if (!rendition || !rendition.location || !rendition.location.start || !tocData || tocData.length === 0) return;
+            const currentHref = rendition.location.start.href;
+            const flatToc = [];
+            function flatten(arr) {
+                arr.forEach(function(item) {
+                    flatToc.push(item);
+                    if (item.subitems && item.subitems.length) flatten(item.subitems);
+                });
+            }
+            flatten(tocData);
+
+            let currentIdx = -1;
+            for (let i = 0; i < flatToc.length; i++) {
+                if (currentHref.indexOf(flatToc[i].href) !== -1 || flatToc[i].href.indexOf(currentHref) !== -1) {
+                    currentIdx = i;
+                    break;
+                }
+            }
+
+            const targetIdx = currentIdx + offset;
+            if (targetIdx >= 0 && targetIdx < flatToc.length) {
+                rendition.display(flatToc[targetIdx].href);
+            }
+        }
+
+        document.getElementById("btn-prev-chapter").addEventListener("click", function() { goToChapterOffset(-1); });
+        document.getElementById("btn-next-chapter").addEventListener("click", function() { goToChapterOffset(1); });
+
+        // Edge chevrons
+        document.getElementById("edge-prev").addEventListener("click", function() { if (rendition) rendition.prev(); });
+        document.getElementById("edge-next").addEventListener("click", function() { if (rendition) rendition.next(); });
+
+        // Drawer & Popover Toggles
+        const drawer = document.getElementById("reader-drawer");
         const popover = document.getElementById("settings-popover");
         const backdrop = document.getElementById("backdrop");
 
-        function toggleTOC() {
+        function openDrawer(tabName) {
             popover.classList.remove("open");
-            drawer.classList.toggle("open");
-            backdrop.classList.toggle("open", drawer.classList.contains("open"));
+            drawer.classList.add("open");
+            backdrop.classList.add("open");
+            hudLocked = true;
+            showHUD();
+
+            if (tabName) {
+                const tabBtn = document.querySelector('.drawer-tab[data-tab="' + tabName + '"]');
+                if (tabBtn) tabBtn.click();
+            }
         }
 
         function toggleSettings() {
             drawer.classList.remove("open");
-            popover.classList.toggle("open");
-            backdrop.classList.toggle("open", popover.classList.contains("open"));
+            const isOpen = popover.classList.toggle("open");
+            backdrop.classList.toggle("open", isOpen);
+            hudLocked = isOpen;
+            if (isOpen) showHUD();
+            else resetHUDTimer();
         }
 
         function closeDrawers() {
             drawer.classList.remove("open");
             popover.classList.remove("open");
             backdrop.classList.remove("open");
+            hudLocked = false;
+            resetHUDTimer();
         }
 
-        document.getElementById("btn-toc").addEventListener("click", toggleTOC);
-        document.getElementById("btn-close-toc").addEventListener("click", closeDrawers);
+        document.getElementById("btn-open-toc").addEventListener("click", function() { openDrawer("toc"); });
+        document.getElementById("btn-close-drawer").addEventListener("click", closeDrawers);
         document.getElementById("btn-settings").addEventListener("click", toggleSettings);
         backdrop.addEventListener("click", closeDrawers);
 
-        // Fullscreen
+        // Fullscreen Toggle
         function toggleFullscreen() {
             if (!document.fullscreenElement) {
-                document.documentElement.requestFullscreen().catch(() => {});
+                document.documentElement.requestFullscreen().catch(function() {});
             } else {
-                document.exitFullscreen().catch(() => {});
+                document.exitFullscreen().catch(function() {});
             }
         }
         document.getElementById("btn-fullscreen").addEventListener("click", toggleFullscreen);
+
+        // Global Keyboard Shortcuts
+        document.addEventListener("keydown", function(e) {
+            if (e.target.tagName === "INPUT" || e.target.tagName === "TEXTAREA") {
+                if (e.key === "Escape") closeDrawers();
+                return;
+            }
+            if (e.key === "ArrowLeft" || e.key === "j" || e.key === "PageUp") {
+                if (rendition) rendition.prev();
+            } else if (e.key === "ArrowRight" || e.key === "k" || e.key === " " || e.key === "PageDown") {
+                if (rendition) rendition.next();
+            } else if (e.key === "t" || e.key === "T") {
+                openDrawer("toc");
+            } else if (e.key === "s" || e.key === "S" || e.key === "a" || e.key === "A") {
+                toggleSettings();
+            } else if (e.key === "b" || e.key === "B") {
+                addCurrentBookmark();
+            } else if (e.key === "m" || e.key === "M") {
+                toggleFlowMode();
+            } else if (e.key === "f" || e.key === "F") {
+                toggleFullscreen();
+            } else if (e.key === "/" || (e.ctrlKey && e.key === "f")) {
+                e.preventDefault();
+                openDrawer("search");
+                setTimeout(function() { document.getElementById("book-search-input").focus(); }, 150);
+            } else if (e.key === "Escape") {
+                closeDrawers();
+            }
+        });
+
+        // Window resize adjusts spread & rendition layout
+        let resizeTimer = null;
+        window.addEventListener("resize", function() {
+            clearTimeout(resizeTimer);
+            resizeTimer = setTimeout(function() {
+                if (rendition) {
+                    if (currentFlow === "paginated") {
+                        const spread = window.innerWidth > 1050 ? "auto" : "none";
+                        rendition.spread(spread);
+                    }
+                    rendition.resize();
+                }
+            }, 200);
+        });
     </script>
 </body>
 </html>`
