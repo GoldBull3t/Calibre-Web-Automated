@@ -1,11 +1,10 @@
 // Calibre-Web Automated NextGen - Progressive Web App Service Worker
-const CACHE_STATIC = 'cwa-static-v2';
+const CACHE_STATIC = 'cwa-static-v2026-03';
 const CACHE_COVERS = 'cwa-covers-v1';
 const CACHE_BOOKS = 'cwa-books-v1';
 const CACHE_API = 'cwa-api-v1';
 
 const STATIC_SHELL = [
-  '/',
   '/manifest.webmanifest',
   '/manifest.json',
   '/favicon.svg',
@@ -32,7 +31,10 @@ self.addEventListener('activate', event => {
       caches.keys().then(keys => {
         return Promise.all(
           keys.filter(k => ![CACHE_STATIC, CACHE_COVERS, CACHE_BOOKS, CACHE_API].includes(k))
-              .map(k => caches.delete(k))
+              .map(k => {
+                console.log('[SW] Apagando cache legada:', k);
+                return caches.delete(k);
+              })
         );
       })
     ])
@@ -74,7 +76,6 @@ self.addEventListener('fetch', event => {
       caches.open(CACHE_BOOKS).then(async cache => {
         const cached = await cache.match(req);
         if (cached) {
-          // Serve do cache imediatamente e atualiza em background se houver rede
           fetch(req).then(networkResp => {
             if (networkResp && networkResp.status === 200) {
               cache.put(req, networkResp);
@@ -118,7 +119,28 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 4. Assets compilados (/assets/*) -> Cache-First
+  // 4. Navegações gerais SPA ('/' e req.mode === 'navigate') -> Network-First (SEMPRE obtém a versão mais recente quando online)
+  if (req.mode === 'navigate' || url.pathname === '/' || url.pathname === '/index.html') {
+    event.respondWith(
+      fetch(req).then(async networkResp => {
+        if (networkResp && networkResp.status === 200) {
+          const cache = await caches.open(CACHE_STATIC);
+          cache.put(req, networkResp.clone());
+        }
+        return networkResp;
+      }).catch(async () => {
+        const cache = await caches.open(CACHE_STATIC);
+        const cached = await cache.match(req) || await cache.match('/');
+        if (cached) return cached;
+        return new Response('<h1>Aplicação Offline</h1><p>Esta página não está em cache.</p>', {
+          headers: { 'Content-Type': 'text/html; charset=utf-8' }
+        });
+      })
+    );
+    return;
+  }
+
+  // 5. Assets estáticos com hash (/assets/*) e bibliotecas -> Cache-First
   if (url.pathname.startsWith('/assets/') || STATIC_SHELL.includes(url.pathname)) {
     event.respondWith(
       caches.open(CACHE_STATIC).then(async cache => {
@@ -137,20 +159,6 @@ self.addEventListener('fetch', event => {
     );
     return;
   }
-
-  // 5. Navegações gerais SPA -> Network-First com fallback para index.html em cache
-  if (req.mode === 'navigate') {
-    event.respondWith(
-      fetch(req).catch(async () => {
-        const cache = await caches.open(CACHE_STATIC);
-        const shell = await cache.match('/');
-        if (shell) return shell;
-        return new Response('<h1>Aplicação Offline</h1><p>Esta página não está em cache.</p>', {
-          headers: { 'Content-Type': 'text/html; charset=utf-8' }
-        });
-      })
-    );
-  }
 });
 
 // Mensagens vindas da interface (Salvar Livro Offline, Verificar, etc.)
@@ -158,83 +166,69 @@ self.addEventListener('message', async event => {
   const data = event.data;
   if (!data || !data.type) return;
 
-  const bookId = data.bookId;
-
-  if (data.type === 'SAVE_BOOK_OFFLINE' && bookId) {
+  if (data.type === 'CACHE_BOOK') {
+    const { bookId, format } = data;
     try {
       const bookCache = await caches.open(CACHE_BOOKS);
       const coverCache = await caches.open(CACHE_COVERS);
 
-      const epubURL = `/show/${bookId}/epub/book.epub`;
-      const readerURL = `/read/${bookId}`;
-      const coverURL = `/cover/${bookId}`;
+      const bookUrl = `/read/${bookId}`;
+      const coverUrl = `/cover/${bookId}`;
 
-      // Descarrega os 3 recursos em paralelo (apenas status 200 para evitar erro de Cache API com 206 Partial Content)
-      await Promise.all([
-        fetch(epubURL).then(res => { if (res.ok && res.status === 200) bookCache.put(epubURL, res); }),
-        fetch(readerURL).then(res => { if (res.ok && res.status === 200) bookCache.put(readerURL, res); }),
-        fetch(coverURL).then(res => { if (res.ok && res.status === 200) coverCache.put(coverURL, res); })
+      const [bookRes, coverRes] = await Promise.all([
+        fetch(bookUrl),
+        fetch(coverUrl)
       ]);
 
-      if (event.source) {
-        event.source.postMessage({ type: 'BOOK_OFFLINE_SAVED', bookId: bookId, success: true });
-      }
+      if (bookRes.ok) await bookCache.put(bookUrl, bookRes);
+      if (coverRes.ok) await coverCache.put(coverUrl, coverRes);
+
+      event.source.postMessage({
+        type: 'BOOK_CACHED_SUCCESS',
+        bookId
+      });
     } catch (err) {
-      if (event.source) {
-        event.source.postMessage({ type: 'BOOK_OFFLINE_SAVED', bookId: bookId, success: false, error: err.message });
-      }
+      event.source.postMessage({
+        type: 'BOOK_CACHED_ERROR',
+        bookId,
+        error: err.message
+      });
     }
   }
 
-  if (data.type === 'REMOVE_BOOK_OFFLINE' && bookId) {
-    try {
-      const bookCache = await caches.open(CACHE_BOOKS);
-      await bookCache.delete(`/show/${bookId}/epub/book.epub`);
-      await bookCache.delete(`/read/${bookId}`);
-      if (event.source) {
-        event.source.postMessage({ type: 'BOOK_OFFLINE_REMOVED', bookId: bookId, success: true });
-      }
-    } catch (err) {
-      if (event.source) {
-        event.source.postMessage({ type: 'BOOK_OFFLINE_REMOVED', bookId: bookId, success: false });
-      }
-    }
-  }
+  if (data.type === 'REMOVE_CACHED_BOOK') {
+    const { bookId } = data;
+    const bookCache = await caches.open(CACHE_BOOKS);
+    const coverCache = await caches.open(CACHE_COVERS);
 
-  if (data.type === 'CHECK_BOOK_OFFLINE' && bookId) {
-    try {
-      const bookCache = await caches.open(CACHE_BOOKS);
-      const matched = await bookCache.match(`/show/${bookId}/epub/book.epub`);
-      if (event.source) {
-        event.source.postMessage({ type: 'BOOK_OFFLINE_STATUS', bookId: bookId, isOffline: !!matched });
-      }
-    } catch (err) {
-      if (event.source) {
-        event.source.postMessage({ type: 'BOOK_OFFLINE_STATUS', bookId: bookId, isOffline: false });
-      }
-    }
+    await Promise.all([
+      bookCache.delete(`/read/${bookId}`),
+      coverCache.delete(`/cover/${bookId}`)
+    ]);
+
+    event.source.postMessage({
+      type: 'BOOK_REMOVED_SUCCESS',
+      bookId
+    });
   }
 
   if (data.type === 'GET_ALL_OFFLINE_BOOKS') {
-    try {
-      const bookCache = await caches.open(CACHE_BOOKS);
-      const requests = await bookCache.keys();
-      const ids = new Set();
-      requests.forEach(req => {
-        const url = new URL(req.url);
-        const match = url.pathname.match(/\/show\/(\d+)\/epub/);
-        if (match && match[1]) {
-          ids.add(parseInt(match[1], 10));
-        }
-      });
-      if (event.source) {
-        event.source.postMessage({ type: 'ALL_OFFLINE_BOOKS', bookIds: Array.from(ids) });
+    const bookCache = await caches.open(CACHE_BOOKS);
+    const keys = await bookCache.keys();
+    const bookIds = [];
+
+    keys.forEach(k => {
+      const u = new URL(k.url);
+      const parts = u.pathname.split('/');
+      if (parts[1] === 'read' && parts[2]) {
+        const idNum = parseInt(parts[2], 10);
+        if (!isNaN(idNum)) bookIds.push(idNum);
       }
-    } catch (err) {
-      if (event.source) {
-        event.source.postMessage({ type: 'ALL_OFFLINE_BOOKS', bookIds: [] });
-      }
-    }
+    });
+
+    event.source.postMessage({
+      type: 'ALL_OFFLINE_BOOKS',
+      bookIds
+    });
   }
 });
-

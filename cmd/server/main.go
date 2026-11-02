@@ -38,6 +38,18 @@ func main() {
 	staticDir := flag.String("static-path", getEnv("STATIC_PATH", "./cps/static"), "Caminho dos assets estáticos")
 	flag.Parse()
 
+	// Auto-detetar binds clássicos do CWA (/calibre-library e /cwa-book-ingest) se existirem no container
+	if *libraryDir == "./library" || *libraryDir == "/library" {
+		if _, err := os.Stat("/calibre-library"); err == nil {
+			*libraryDir = "/calibre-library"
+		}
+	}
+	if *ingestDir == "./ingest" || *ingestDir == "/ingest" {
+		if _, err := os.Stat("/cwa-book-ingest"); err == nil {
+			*ingestDir = "/cwa-book-ingest"
+		}
+	}
+
 	// Split Libraries fallback
 	if *metadataDir == "" {
 		*metadataDir = *libraryDir

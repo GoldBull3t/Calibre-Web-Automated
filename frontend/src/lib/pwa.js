@@ -32,6 +32,7 @@ export function initPWA() {
     window.addEventListener('load', () => {
       navigator.serviceWorker.register('/sw.js', { scope: '/' })
         .then(reg => {
+          reg.update();
           // Verifica se há livros guardados offline
           refreshOfflineBookIds();
         })
