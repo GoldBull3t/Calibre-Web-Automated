@@ -1081,49 +1081,84 @@ func (d *DB) ListFormats(ctx context.Context) ([]EntityCount, error) {
 	return items, nil
 }
 
-// GetAuthorByID retorna o autor pelo ID.
+// GetAuthorByID retorna o autor pelo ID com contagem de livros.
 func (d *DB) GetAuthorByID(ctx context.Context, id int64) (*EntityCount, error) {
 	var ec EntityCount
-	err := d.roPool.QueryRowContext(ctx, "SELECT id, name FROM authors WHERE id = ?", id).Scan(&ec.ID, &ec.Name)
+	query := `
+		SELECT a.id, a.name, COUNT(DISTINCT bal.book) AS book_count
+		FROM authors a
+		LEFT JOIN books_authors_link bal ON a.id = bal.author
+		WHERE a.id = ?
+		GROUP BY a.id
+	`
+	err := d.roPool.QueryRowContext(ctx, query, id).Scan(&ec.ID, &ec.Name, &ec.Count)
 	if err != nil {
 		return nil, err
 	}
 	return &ec, nil
 }
 
-// GetSeriesByID retorna a série pelo ID.
+// GetSeriesByID retorna a série pelo ID com contagem de livros.
 func (d *DB) GetSeriesByID(ctx context.Context, id int64) (*EntityCount, error) {
 	var ec EntityCount
-	err := d.roPool.QueryRowContext(ctx, "SELECT id, name FROM series WHERE id = ?", id).Scan(&ec.ID, &ec.Name)
+	query := `
+		SELECT s.id, s.name, COUNT(DISTINCT bsl.book) AS book_count
+		FROM series s
+		LEFT JOIN books_series_link bsl ON s.id = bsl.series
+		WHERE s.id = ?
+		GROUP BY s.id
+	`
+	err := d.roPool.QueryRowContext(ctx, query, id).Scan(&ec.ID, &ec.Name, &ec.Count)
 	if err != nil {
 		return nil, err
 	}
 	return &ec, nil
 }
 
-// GetTagByID retorna a categoria/tag pelo ID.
+// GetTagByID retorna a categoria/tag pelo ID com contagem de livros.
 func (d *DB) GetTagByID(ctx context.Context, id int64) (*EntityCount, error) {
 	var ec EntityCount
-	err := d.roPool.QueryRowContext(ctx, "SELECT id, name FROM tags WHERE id = ?", id).Scan(&ec.ID, &ec.Name)
+	query := `
+		SELECT t.id, t.name, COUNT(DISTINCT btl.book) AS book_count
+		FROM tags t
+		LEFT JOIN books_tags_link btl ON t.id = btl.tag
+		WHERE t.id = ?
+		GROUP BY t.id
+	`
+	err := d.roPool.QueryRowContext(ctx, query, id).Scan(&ec.ID, &ec.Name, &ec.Count)
 	if err != nil {
 		return nil, err
 	}
 	return &ec, nil
 }
 
-// GetPublisherByID retorna a editora pelo ID.
+// GetPublisherByID retorna a editora pelo ID com contagem de livros.
 func (d *DB) GetPublisherByID(ctx context.Context, id int64) (*EntityCount, error) {
 	var ec EntityCount
-	err := d.roPool.QueryRowContext(ctx, "SELECT id, name FROM publishers WHERE id = ?", id).Scan(&ec.ID, &ec.Name)
+	query := `
+		SELECT p.id, p.name, COUNT(DISTINCT bpl.book) AS book_count
+		FROM publishers p
+		LEFT JOIN books_publishers_link bpl ON p.id = bpl.publisher
+		WHERE p.id = ?
+		GROUP BY p.id
+	`
+	err := d.roPool.QueryRowContext(ctx, query, id).Scan(&ec.ID, &ec.Name, &ec.Count)
 	if err != nil {
 		return nil, err
 	}
 	return &ec, nil
 }
 
-// GetAllAuthors retorna todos os autores ordenados alfabeticamente.
+// GetAllAuthors retorna todos os autores ordenados alfabeticamente com contagem de livros.
 func (d *DB) GetAllAuthors(ctx context.Context) ([]EntityCount, error) {
-	rows, err := d.roPool.QueryContext(ctx, "SELECT id, name FROM authors ORDER BY name COLLATE NOCASE ASC")
+	query := `
+		SELECT a.id, a.name, COUNT(DISTINCT bal.book) AS book_count
+		FROM authors a
+		LEFT JOIN books_authors_link bal ON a.id = bal.author
+		GROUP BY a.id
+		ORDER BY a.name COLLATE NOCASE ASC
+	`
+	rows, err := d.roPool.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -1132,16 +1167,23 @@ func (d *DB) GetAllAuthors(ctx context.Context) ([]EntityCount, error) {
 	var items []EntityCount
 	for rows.Next() {
 		var ec EntityCount
-		if err := rows.Scan(&ec.ID, &ec.Name); err == nil {
+		if err := rows.Scan(&ec.ID, &ec.Name, &ec.Count); err == nil {
 			items = append(items, ec)
 		}
 	}
 	return items, rows.Err()
 }
 
-// GetAllPublishers retorna todas as editoras.
+// GetAllPublishers retorna todas as editoras com contagem de livros.
 func (d *DB) GetAllPublishers(ctx context.Context) ([]EntityCount, error) {
-	rows, err := d.roPool.QueryContext(ctx, "SELECT id, name FROM publishers ORDER BY name COLLATE NOCASE ASC")
+	query := `
+		SELECT p.id, p.name, COUNT(DISTINCT bpl.book) AS book_count
+		FROM publishers p
+		LEFT JOIN books_publishers_link bpl ON p.id = bpl.publisher
+		GROUP BY p.id
+		ORDER BY p.name COLLATE NOCASE ASC
+	`
+	rows, err := d.roPool.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -1150,16 +1192,23 @@ func (d *DB) GetAllPublishers(ctx context.Context) ([]EntityCount, error) {
 	var items []EntityCount
 	for rows.Next() {
 		var ec EntityCount
-		if err := rows.Scan(&ec.ID, &ec.Name); err == nil {
+		if err := rows.Scan(&ec.ID, &ec.Name, &ec.Count); err == nil {
 			items = append(items, ec)
 		}
 	}
 	return items, rows.Err()
 }
 
-// GetAllTags retorna todas as tags.
+// GetAllTags retorna todas as tags com contagem de livros.
 func (d *DB) GetAllTags(ctx context.Context) ([]EntityCount, error) {
-	rows, err := d.roPool.QueryContext(ctx, "SELECT id, name FROM tags ORDER BY name COLLATE NOCASE ASC")
+	query := `
+		SELECT t.id, t.name, COUNT(DISTINCT btl.book) AS book_count
+		FROM tags t
+		LEFT JOIN books_tags_link btl ON t.id = btl.tag
+		GROUP BY t.id
+		ORDER BY t.name COLLATE NOCASE ASC
+	`
+	rows, err := d.roPool.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -1168,16 +1217,23 @@ func (d *DB) GetAllTags(ctx context.Context) ([]EntityCount, error) {
 	var items []EntityCount
 	for rows.Next() {
 		var ec EntityCount
-		if err := rows.Scan(&ec.ID, &ec.Name); err == nil {
+		if err := rows.Scan(&ec.ID, &ec.Name, &ec.Count); err == nil {
 			items = append(items, ec)
 		}
 	}
 	return items, rows.Err()
 }
 
-// GetAllSeries retorna todas as séries.
+// GetAllSeries retorna todas as séries com contagem de livros.
 func (d *DB) GetAllSeries(ctx context.Context) ([]EntityCount, error) {
-	rows, err := d.roPool.QueryContext(ctx, "SELECT id, name FROM series ORDER BY name COLLATE NOCASE ASC")
+	query := `
+		SELECT s.id, s.name, COUNT(DISTINCT bsl.book) AS book_count
+		FROM series s
+		LEFT JOIN books_series_link bsl ON s.id = bsl.series
+		GROUP BY s.id
+		ORDER BY s.name COLLATE NOCASE ASC
+	`
+	rows, err := d.roPool.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -1186,16 +1242,23 @@ func (d *DB) GetAllSeries(ctx context.Context) ([]EntityCount, error) {
 	var items []EntityCount
 	for rows.Next() {
 		var ec EntityCount
-		if err := rows.Scan(&ec.ID, &ec.Name); err == nil {
+		if err := rows.Scan(&ec.ID, &ec.Name, &ec.Count); err == nil {
 			items = append(items, ec)
 		}
 	}
 	return items, rows.Err()
 }
 
-// GetAllLanguages retorna todas as linguagens.
+// GetAllLanguages retorna todas as linguagens com contagem de livros.
 func (d *DB) GetAllLanguages(ctx context.Context) ([]EntityCount, error) {
-	rows, err := d.roPool.QueryContext(ctx, "SELECT id, lang_code FROM languages ORDER BY lang_code ASC")
+	query := `
+		SELECT l.id, l.lang_code, COUNT(DISTINCT bll.book) AS book_count
+		FROM languages l
+		LEFT JOIN books_languages_link bll ON l.id = bll.lang_code
+		GROUP BY l.id
+		ORDER BY l.lang_code ASC
+	`
+	rows, err := d.roPool.QueryContext(ctx, query)
 	if err != nil {
 		return nil, err
 	}
@@ -1204,7 +1267,7 @@ func (d *DB) GetAllLanguages(ctx context.Context) ([]EntityCount, error) {
 	var items []EntityCount
 	for rows.Next() {
 		var ec EntityCount
-		if err := rows.Scan(&ec.ID, &ec.Name); err == nil {
+		if err := rows.Scan(&ec.ID, &ec.Name, &ec.Count); err == nil {
 			items = append(items, ec)
 		}
 	}

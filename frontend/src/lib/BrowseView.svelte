@@ -37,6 +37,11 @@
     dispatch('filterSelect', { type, item });
   }
 
+  function formatCount(item, singular, plural) {
+    const n = item.count !== undefined ? item.count : (item.book_count || 0);
+    return `${n} ${n === 1 ? singular : plural}`;
+  }
+
   $: filteredAuthors = authors.filter(a => a.name.toLowerCase().includes(filterText.toLowerCase()));
   $: filteredSeries = series.filter(s => s.name.toLowerCase().includes(filterText.toLowerCase()));
   $: filteredTags = tags.filter(t => t.name.toLowerCase().includes(filterText.toLowerCase()));
@@ -120,7 +125,7 @@
             <div class="entity-avatar">{a.name.slice(0, 2).toUpperCase()}</div>
             <div class="entity-info">
               <span class="entity-name">{a.name}</span>
-              <span class="entity-sub">{a.count !== undefined ? a.count : (a.book_count || 0)} {a.count === 1 ? 'livro' : 'livros'}</span>
+              <span class="entity-sub">{formatCount(a, 'livro', 'livros')}</span>
             </div>
           </div>
         {/each}
@@ -137,7 +142,7 @@
             </div>
             <div class="entity-info">
               <span class="entity-name">{s.name}</span>
-              <span class="entity-sub">{s.count !== undefined ? s.count : (s.book_count || 0)} {s.count === 1 ? 'volume' : 'volumes'}</span>
+              <span class="entity-sub">{formatCount(s, 'volume', 'volumes')}</span>
             </div>
           </div>
         {/each}
@@ -154,7 +159,7 @@
             </div>
             <div class="entity-info">
               <span class="entity-name">{t.name}</span>
-              <span class="entity-sub">{t.count !== undefined ? t.count : (t.book_count || 0)} {t.count === 1 ? 'obra' : 'obras'}</span>
+              <span class="entity-sub">{formatCount(t, 'obra', 'obras')}</span>
             </div>
           </div>
         {/each}
@@ -169,7 +174,7 @@
             <div class="entity-avatar format">{(f.name || f.format || 'DOC').toUpperCase()}</div>
             <div class="entity-info">
               <span class="entity-name">{f.name || f.format}</span>
-              <span class="entity-sub">{f.count !== undefined ? f.count : (f.book_count || 0)} ficheiros</span>
+              <span class="entity-sub">{formatCount(f, 'ficheiro', 'ficheiros')}</span>
             </div>
           </div>
         {/each}
