@@ -37,3 +37,4 @@ fi
 
 # Se já não for root, executa diretamente
 exec /app/calibre-web-go "$@"
+

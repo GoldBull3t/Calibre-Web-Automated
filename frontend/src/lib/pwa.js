@@ -41,6 +41,15 @@ export function initPWA() {
         });
     });
 
+    // Recarrega automaticamente quando uma nova versão do Service Worker assume o controlo
+    let refreshing = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (!refreshing) {
+        refreshing = true;
+        window.location.reload();
+      }
+    });
+
     // Escuta mensagens vindas do SW
     navigator.serviceWorker.addEventListener('message', (event) => {
       const data = event.data;

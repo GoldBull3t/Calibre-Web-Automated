@@ -88,6 +88,7 @@
       });
       if (res.ok) {
         coverTimestamp = Date.now();
+        if (book) book.last_modified = new Date().toISOString();
         toast.success('Capa do livro atualizada com sucesso!');
         dispatch('refresh');
       } else {

@@ -111,7 +111,7 @@
         {#each results as r}
           <div class="result-card glass glass-hover">
             <div class="thumb-box" on:click={() => openBook(r.book_id)} on:keydown={(e) => { if (e.key === 'Enter') openBook(r.book_id); }} role="button" tabindex="0">
-              <img src="/cover/{r.book_id}" alt={r.title} class="thumb-img" />
+              <img src="/cover/{r.book_id}?t={r.last_modified ? new Date(r.last_modified).getTime() : r.book_id}" alt={r.title} class="thumb-img" />
             </div>
 
             <div class="result-info">

@@ -1,5 +1,5 @@
 // Calibre-Web Automated NextGen - Progressive Web App Service Worker
-const CACHE_STATIC = 'cwa-static-v2026-03';
+const CACHE_STATIC = 'cwa-static-v2026-04';
 const CACHE_COVERS = 'cwa-covers-v1';
 const CACHE_BOOKS = 'cwa-books-v1';
 const CACHE_API = 'cwa-api-v1';
@@ -50,21 +50,25 @@ self.addEventListener('fetch', event => {
     return;
   }
 
-  // 1. Capas (/cover/*) -> Cache-First com atualização em background
+  // 1. Capas (/cover/*) -> Stale-While-Revalidate com suporte a cache-busting (?t=)
   if (url.pathname.startsWith('/cover/')) {
     event.respondWith(
       caches.open(CACHE_COVERS).then(async cache => {
         const cached = await cache.match(req);
-        if (cached) return cached;
-        try {
-          const networkResp = await fetch(req);
+        const fetchPromise = fetch(req).then(networkResp => {
           if (networkResp && networkResp.status === 200) {
             cache.put(req, networkResp.clone());
           }
           return networkResp;
-        } catch (err) {
-          return new Response('', { status: 404, statusText: 'Offline cover not found' });
+        }).catch(() => null);
+
+        if (cached) {
+          // Devolve cache imediatamente mas atualiza em segundo plano
+          return cached;
         }
+        const networkResp = await fetchPromise;
+        if (networkResp) return networkResp;
+        return new Response('', { status: 404, statusText: 'Offline cover not found' });
       })
     );
     return;

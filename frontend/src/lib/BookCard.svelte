@@ -43,7 +43,7 @@
   <!-- Cover Container -->
   <div class="cover-wrap">
     <img 
-      src="/cover/{book.id}" 
+      src="/cover/{book.id}?t={book.last_modified ? new Date(book.last_modified).getTime() : (book.pubdate ? new Date(book.pubdate).getTime() : book.id)}" 
       alt={book.title} 
       loading="lazy" 
       class="cover-img"

@@ -35,9 +35,13 @@ func (h *Handler) GetCover(w http.ResponseWriter, r *http.Request) {
 	}
 
 	cacheKey := fmt.Sprintf("cover:%d", id)
+	cacheControl := "public, max-age=3600, must-revalidate"
+	if r.URL.Query().Get("t") != "" || r.URL.Query().Get("v") != "" {
+		cacheControl = "public, max-age=604800, immutable"
+	}
 	if h.coverCache != nil {
 		if data, mime, ok := h.coverCache.Get(cacheKey); ok {
-			w.Header().Set("Cache-Control", "public, max-age=604800, immutable")
+			w.Header().Set("Cache-Control", cacheControl)
 			w.Header().Set("Content-Type", mime)
 			w.Header().Set("Content-Length", strconv.Itoa(len(data)))
 			_, _ = w.Write(data)
@@ -57,14 +61,14 @@ func (h *Handler) GetCover(w http.ResponseWriter, r *http.Request) {
 		if fi.Size() <= 512*1024 && h.coverCache != nil {
 			if data, err := os.ReadFile(coverPath); err == nil {
 				h.coverCache.Put(cacheKey, data, "image/jpeg")
-				w.Header().Set("Cache-Control", "public, max-age=604800, immutable")
+				w.Header().Set("Cache-Control", cacheControl)
 				w.Header().Set("Content-Type", "image/jpeg")
 				w.Header().Set("Content-Length", strconv.FormatInt(fi.Size(), 10))
 				_, _ = w.Write(data)
 				return
-			}
 		}
-		w.Header().Set("Cache-Control", "public, max-age=604800, immutable")
+		}
+		w.Header().Set("Cache-Control", cacheControl)
 		http.ServeFile(w, r, coverPath)
 		return
 	}
@@ -152,6 +156,8 @@ func (h *Handler) UploadCover(w http.ResponseWriter, r *http.Request) {
 		http.Error(w, fmt.Sprintf(`{"error":"Falha ao gravar capa no disco: %v"}`, err), http.StatusInternalServerError)
 		return
 	}
+
+	_ = h.db.SetBookHasCover(r.Context(), id, true)
 
 	// Invalida e renova cache em memória
 	cacheKey := fmt.Sprintf("cover:%d", id)

@@ -99,3 +99,4 @@ func TestParseSeries(t *testing.T) {
 		})
 	}
 }
+

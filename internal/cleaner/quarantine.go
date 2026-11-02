@@ -67,3 +67,4 @@ func QuarantineFile(ctx context.Context, filePath, quarantineDir, reason string,
 
 	return nil
 }
+

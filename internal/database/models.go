@@ -27,6 +27,7 @@ type Book struct {
 	Languages   []string     `json:"languages,omitempty"`
 	ReadStatus  bool         `json:"read_status"`
 	IsArchived  bool         `json:"is_archived"`
+	LastModified time.Time   `json:"last_modified,omitempty"`
 }
 
 // BookDetails inclui metadados completos como a sinopse e identificadores externos.

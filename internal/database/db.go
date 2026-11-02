@@ -509,7 +509,8 @@ func (d *DB) ListBooks(ctx context.Context, f BookFilter) (*PageResult[Book], er
 			COALESCE(GROUP_CONCAT(d.format || '::' || d.uncompressed_size || '::' || REPLACE(d.name, ',', '__COMMA__')), '') AS formats_list,
 			COALESCE(GROUP_CONCAT(DISTINCT p.name), '') AS publishers_list,
 			COALESCE(MAX(r.rating), 0) AS max_rating,
-			COALESCE(GROUP_CONCAT(DISTINCT l.lang_code), '') AS languages_list
+			COALESCE(GROUP_CONCAT(DISTINCT l.lang_code), '') AS languages_list,
+			COALESCE(b.last_modified, CURRENT_TIMESTAMP) AS last_mod_str
 		FROM books b
 		LEFT JOIN books_authors_link bal ON b.id = bal.book
 		LEFT JOIN authors a ON bal.author = a.id
@@ -540,7 +541,7 @@ func (d *DB) ListBooks(ctx context.Context, f BookFilter) (*PageResult[Book], er
 	books := make([]Book, 0, f.PageSize)
 	for rows.Next() {
 		var b Book
-		var authorsStr, tagsStr, formatsStr, pubDateStr, publishersStr, languagesStr string
+		var authorsStr, tagsStr, formatsStr, pubDateStr, publishersStr, languagesStr, lastModStr string
 
 		err := rows.Scan(
 			&b.ID,
@@ -557,12 +558,14 @@ func (d *DB) ListBooks(ctx context.Context, f BookFilter) (*PageResult[Book], er
 			&publishersStr,
 			&b.Rating,
 			&languagesStr,
+			&lastModStr,
 		)
 		if err != nil {
 			return nil, fmt.Errorf("erro no scan do livro: %w", err)
 		}
 
 		b.PubDate = parseCalibreDate(pubDateStr)
+		b.LastModified = parseCalibreDate(lastModStr)
 		if authorsStr != "" {
 			b.Authors = strings.Split(authorsStr, ",")
 		}
@@ -652,7 +655,8 @@ func (d *DB) GetBookByID(ctx context.Context, id int64) (*BookDetails, error) {
 			COALESCE(GROUP_CONCAT(DISTINCT p.name), '') AS publishers_list,
 			COALESCE(MAX(r.rating), 0) AS max_rating,
 			COALESCE(GROUP_CONCAT(DISTINCT l.lang_code), '') AS languages_list,
-			COALESCE(c.text, '') AS comment
+			COALESCE(c.text, '') AS comment,
+			COALESCE(b.last_modified, CURRENT_TIMESTAMP) AS last_mod_str
 		FROM books b
 		LEFT JOIN books_authors_link bal ON b.id = bal.book
 		LEFT JOIN authors a ON bal.author = a.id
@@ -672,12 +676,13 @@ func (d *DB) GetBookByID(ctx context.Context, id int64) (*BookDetails, error) {
 		GROUP BY b.id
 	`
 	var bd BookDetails
-	var authorsStr, tagsStr, formatsStr, pubDateStr, publishersStr, languagesStr string
+	var authorsStr, tagsStr, formatsStr, pubDateStr, publishersStr, languagesStr, lastModStr string
 
 	err := d.roPool.QueryRowContext(ctx, query, id).Scan(
 		&bd.ID, &bd.Title, &bd.Sort, &bd.Path, &bd.HasCover,
 		&pubDateStr, &bd.SeriesIndex, &authorsStr, &bd.Series,
 		&tagsStr, &formatsStr, &publishersStr, &bd.Rating, &languagesStr, &bd.Comment,
+		&lastModStr,
 	)
 	if err != nil {
 		if err == sql.ErrNoRows {
@@ -687,6 +692,7 @@ func (d *DB) GetBookByID(ctx context.Context, id int64) (*BookDetails, error) {
 	}
 
 	bd.PubDate = parseCalibreDate(pubDateStr)
+	bd.LastModified = parseCalibreDate(lastModStr)
 	if authorsStr != "" {
 		bd.Authors = strings.Split(authorsStr, ",")
 	}
@@ -1474,7 +1480,7 @@ func (d *DB) UpdateBookMetadata(ctx context.Context, id int64, form BookEditForm
 		if titleSort == "" {
 			titleSort = form.Title
 		}
-		_, err := tx.ExecContext(ctx, "UPDATE books SET title = ?, sort = ?, series_index = ? WHERE id = ?",
+		_, err := tx.ExecContext(ctx, "UPDATE books SET title = ?, sort = ?, series_index = ?, last_modified = CURRENT_TIMESTAMP WHERE id = ?",
 			form.Title, titleSort, form.SeriesIndex, id)
 		if err != nil {
 			return err
@@ -1606,7 +1612,7 @@ func (d *DB) SetBookHasCover(ctx context.Context, id int64, hasCover bool) error
 		val = 1
 	}
 	return d.ExecuteWrite(func(tx *sql.Tx) error {
-		_, err := tx.ExecContext(ctx, "UPDATE books SET has_cover = ? WHERE id = ?", val, id)
+		_, err := tx.ExecContext(ctx, "UPDATE books SET has_cover = ?, last_modified = CURRENT_TIMESTAMP WHERE id = ?", val, id)
 		return err
 	})
 }

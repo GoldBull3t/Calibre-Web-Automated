@@ -140,7 +140,7 @@
               {#each g.books as b}
                 <div class="sub-book glass">
                   <div class="sub-cover">
-                    <img src="/cover/{b.id}" alt={b.title} />
+                    <img src="/cover/{b.id}?t={b.last_modified ? new Date(b.last_modified).getTime() : b.id}" alt={b.title} />
                   </div>
                   <div class="sub-info">
                     <span class="sub-id">ID: #{b.id}</span>

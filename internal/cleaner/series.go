@@ -57,3 +57,4 @@ func ParseSeries(raw string) (cleanTitle string, seriesName string, seriesIndex 
 
 	return cleaned, "", 0, false
 }
+

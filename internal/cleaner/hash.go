@@ -25,3 +25,4 @@ func CalculateSHA256(filePath string) (string, int64, error) {
 
 	return hex.EncodeToString(hasher.Sum(nil)), n, nil
 }
+
