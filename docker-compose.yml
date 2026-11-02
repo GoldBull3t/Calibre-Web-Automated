@@ -16,6 +16,8 @@ services:
       - /path/to/config/folder:/config
       # Ingest de livros: detetado automaticamente pelo motor Go
       - /path/to/the/folder/you/want/to/use/for/book/ingest:/cwa-book-ingest
+      # Quarentena de livros corrompidos/ambíguos:
+      - /path/to/cwa-quarantine:/cwa-quarantine
       # Biblioteca Calibre: detetada automaticamente pelo motor Go
       - /path/to/your/calibre/library:/calibre-library
       - /path/to/your/calibre/plugins/folder:/config/.config/calibre/plugins

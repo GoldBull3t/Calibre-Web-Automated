@@ -433,11 +433,11 @@ func (h *Handler) PDFReaderWeb(w http.ResponseWriter, r *http.Request, id int64,
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>%%s — Leitor de PDF</title>
+  <title>%s — Leitor de PDF</title>
   <link rel="shortcut icon" href="/static/favicon.ico">
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    html, body { width: 100%%%%; height: 100%%%%; overflow: hidden; background: #0b0f19; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; }
+    html, body { width: 100%%; height: 100%%; overflow: hidden; background: #0b0f19; color: #e2e8f0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; flex-direction: column; }
     #pdf-header {
       height: 48px; background: rgba(15, 23, 42, 0.95); border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       display: flex; align-items: center; justify-content: space-between; padding: 0 16px; flex-shrink: 0;
@@ -451,8 +451,8 @@ func (h *Handler) PDFReaderWeb(w http.ResponseWriter, r *http.Request, id int64,
     .header-btn:hover { background: rgba(255,255,255,0.08); border-color: rgba(255,255,255,0.12); }
     .header-btn svg { width: 16px; height: 16px; fill: none; stroke: currentColor; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; }
     .book-title { font-size: 13px; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 48vw; }
-    #pdf-container { flex: 1; width: 100%%%%; height: calc(100%%%% - 48px); background: #1e293b; position: relative; }
-    #pdf-frame { width: 100%%%%; height: 100%%%%; border: none; display: block; }
+    #pdf-container { flex: 1; width: 100%%; height: calc(100%% - 48px); background: #1e293b; position: relative; }
+    #pdf-frame { width: 100%%; height: 100%%; border: none; display: block; }
   </style>
 </head>
 <body>
@@ -461,9 +461,9 @@ func (h *Handler) PDFReaderWeb(w http.ResponseWriter, r *http.Request, id int64,
       <svg viewBox="0 0 24 24"><path d="M19 12H5M12 19l-7-7 7-7"/></svg>
       <span>Biblioteca</span>
     </a>
-    <div class="book-title">%%s</div>
+    <div class="book-title">%s</div>
     <div style="display:flex; align-items:center; gap:8px;">
-      <a href="/download/%%d/pdf" class="header-btn" download title="Descarregar PDF">
+      <a href="/download/%d/pdf" class="header-btn" download title="Descarregar PDF">
         <svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4M7 10l5 5 5-5M12 15V3"/></svg>
         <span>Descarregar</span>
       </a>
@@ -473,7 +473,7 @@ func (h *Handler) PDFReaderWeb(w http.ResponseWriter, r *http.Request, id int64,
     </div>
   </header>
   <main id="pdf-container">
-    <iframe id="pdf-frame" src="/show/%%d/pdf/book.pdf#view=FitH" type="application/pdf"></iframe>
+    <iframe id="pdf-frame" src="/show/%d/pdf/book.pdf#view=FitH" type="application/pdf"></iframe>
   </main>
   <script>
     document.getElementById("btn-fullscreen").addEventListener("click", function() {

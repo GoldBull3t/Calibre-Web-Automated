@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"runtime"
 	"path/filepath"
 	"strconv"
 	"strings"
@@ -50,13 +51,14 @@ type DB struct {
 
 // Open inicializa as ligações ao metadata.db e app.db com cache de páginas de 2MB por conexão e modo WAL.
 func Open(metadataDbPath, appDbPath string) (*DB, error) {
-	// 1. Conexão RW inicializada primeiro para assegurar journal_mode=WAL no cabeçalho do ficheiro
-	rwDSN := fmt.Sprintf("file:%s?mode=rwc&_journal_mode=WAL&_cache_size=-2000&_busy_timeout=5000&_synchronous=NORMAL", metadataDbPath)
+	// 1. Conexão RW inicializada com pragmas estritos: WAL, busy_timeout 5000ms, 64MB cache, foreign_keys
+	rwDSN := fmt.Sprintf("file:%s?mode=rwc&_journal_mode=WAL&_cache_size=-64000&_busy_timeout=5000&_synchronous=NORMAL&_foreign_keys=ON", metadataDbPath)
 	rw, err := sql.Open("sqlite", rwDSN)
 	if err != nil {
 		return nil, fmt.Errorf("erro ao abrir DB em modo escrita: %w", err)
 	}
 
+	// Single Writer Pool: garante que transações concorrentes nunca gerem database is locked
 	rw.SetMaxOpenConns(1)
 	rw.SetMaxIdleConns(1)
 	rw.SetConnMaxLifetime(time.Hour)
@@ -66,25 +68,31 @@ func Open(metadataDbPath, appDbPath string) (*DB, error) {
 
 	if _, err := rw.ExecContext(ctx, `
 		PRAGMA journal_mode=WAL;
+		PRAGMA busy_timeout=5000;
 		PRAGMA synchronous=NORMAL;
+		PRAGMA cache_size=-64000;
+		PRAGMA foreign_keys=ON;
 		PRAGMA mmap_size=67108864;
 		PRAGMA temp_store=MEMORY;
-		PRAGMA foreign_keys=ON;
 	`); err != nil {
 		rw.Close()
-		return nil, fmt.Errorf("falha ao ativar WAL mode: %w", err)
+		return nil, fmt.Errorf("falha ao ativar WAL e pragmas: %w", err)
 	}
 
-	// 2. Conexão RO aberta com WAL já consolidado e cache de 2MB
-	roDSN := fmt.Sprintf("file:%s?mode=ro&_cache_size=-2000&_busy_timeout=5000", metadataDbPath)
+	// 2. Conexão RO aberta com WAL já consolidado, cache de 64MB e modo query_only
+	roDSN := fmt.Sprintf("file:%s?mode=ro&_cache_size=-64000&_busy_timeout=5000&_query_only=ON", metadataDbPath)
 	ro, err := sql.Open("sqlite", roDSN)
 	if err != nil {
 		rw.Close()
 		return nil, fmt.Errorf("erro ao abrir DB em modo leitura: %w", err)
 	}
 
-	ro.SetMaxOpenConns(6)
-	ro.SetMaxIdleConns(4)
+	maxReaders := runtime.NumCPU() * 2
+	if maxReaders < 4 {
+		maxReaders = 4
+	}
+	ro.SetMaxOpenConns(maxReaders)
+	ro.SetMaxIdleConns(maxReaders / 2)
 	ro.SetConnMaxLifetime(30 * time.Minute)
 
 	if err := ro.PingContext(ctx); err != nil {
@@ -97,16 +105,195 @@ func Open(metadataDbPath, appDbPath string) (*DB, error) {
 	var app *sql.DB
 	if appDbPath != "" {
 		if _, err := os.Stat(appDbPath); err == nil {
-			appDSN := fmt.Sprintf("file:%s?mode=rwc&_journal_mode=WAL&_cache_size=-2000&_busy_timeout=5000", appDbPath)
+			appDSN := fmt.Sprintf("file:%s?mode=rwc&_journal_mode=WAL&_cache_size=-64000&_busy_timeout=5000&_synchronous=NORMAL&_foreign_keys=ON", appDbPath)
 			if appConn, err := sql.Open("sqlite", appDSN); err == nil {
-				appConn.SetMaxOpenConns(2)
-				appConn.SetMaxIdleConns(2)
+				appConn.SetMaxOpenConns(1)
+				appConn.SetMaxIdleConns(1)
+				_, _ = appConn.ExecContext(ctx, `
+					PRAGMA journal_mode=WAL;
+					PRAGMA busy_timeout=5000;
+					PRAGMA synchronous=NORMAL;
+					PRAGMA cache_size=-64000;
+					PRAGMA foreign_keys=ON;
+				`)
 				app = appConn
 			}
 		}
 	}
 
-	return &DB{roPool: ro, rwPool: rw, appPool: app}, nil
+	dbInstance := &DB{roPool: ro, rwPool: rw, appPool: app}
+	dbInstance.initCwaAuxiliaryTables(ctx)
+	return dbInstance, nil
+}
+
+// initCwaAuxiliaryTables cria tabelas para controlo de deduplicação e quarentena
+func (d *DB) initCwaAuxiliaryTables(ctx context.Context) {
+	pool := d.appPool
+	if pool == nil {
+		pool = d.rwPool
+	}
+	if pool != nil {
+		_, _ = pool.ExecContext(ctx, `
+			CREATE TABLE IF NOT EXISTS cwa_book_hashes (
+				hash TEXT PRIMARY KEY,
+				book_id INTEGER NOT NULL,
+				format TEXT NOT NULL,
+				file_size INTEGER NOT NULL DEFAULT 0,
+				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE TABLE IF NOT EXISTS cwa_quarantine (
+				id TEXT PRIMARY KEY,
+				filename TEXT NOT NULL,
+				file_path TEXT NOT NULL,
+				file_hash TEXT,
+				file_size INTEGER NOT NULL DEFAULT 0,
+				reason TEXT NOT NULL,
+				error_details TEXT,
+				status TEXT NOT NULL DEFAULT 'pending',
+				created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+			);
+			CREATE INDEX IF NOT EXISTS idx_cwa_hashes_book ON cwa_book_hashes(book_id);
+			CREATE INDEX IF NOT EXISTS idx_cwa_quarantine_status ON cwa_quarantine(status);
+		`)
+	}
+}
+
+// HealthStatus detalha o estado e latência das pools SQLite.
+type HealthStatus struct {
+	Status    string            `json:"status"` // "ok", "degraded", "unhealthy"
+	Latency   map[string]string `json:"latency"`
+	Databases map[string]bool   `json:"databases"`
+	Details   map[string]string `json:"details,omitempty"`
+}
+
+// HealthCheck verifica ativamente a integridade e prontidão do SQLite com timeout rígido.
+func (d *DB) HealthCheck(ctx context.Context) HealthStatus {
+	ctxTimeout, cancel := context.WithTimeout(ctx, 2*time.Second)
+	defer cancel()
+
+	status := HealthStatus{
+		Status:    "ok",
+		Latency:   make(map[string]string),
+		Databases: make(map[string]bool),
+		Details:   make(map[string]string),
+	}
+
+	checkPool := func(name string, pool *sql.DB, testQuery string) {
+		if pool == nil {
+			status.Databases[name] = false
+			status.Details[name] = "pool não configurada"
+			if status.Status == "ok" {
+				status.Status = "degraded"
+			}
+			return
+		}
+		start := time.Now()
+		var val int
+		err := pool.QueryRowContext(ctxTimeout, testQuery).Scan(&val)
+		latency := time.Since(start)
+		status.Latency[name] = latency.String()
+
+		if err != nil {
+			status.Databases[name] = false
+			status.Details[name] = err.Error()
+			status.Status = "unhealthy"
+		} else {
+			status.Databases[name] = true
+		}
+	}
+
+	checkPool("metadata_ro", d.roPool, "SELECT 1 FROM books LIMIT 1;")
+	checkPool("metadata_rw", d.rwPool, "SELECT 1;")
+	if d.appPool != nil {
+		checkPool("app_db", d.appPool, "SELECT 1;")
+	}
+
+	return status
+}
+
+// GetBookByHash pesquisa se já existe algum livro com o hash SHA-256 especificado.
+func (d *DB) GetBookByHash(ctx context.Context, hash string) (bookID int64, format string, err error) {
+	pool := d.appPool
+	if pool == nil {
+		pool = d.roPool
+	}
+	err = pool.QueryRowContext(ctx, `SELECT book_id, format FROM cwa_book_hashes WHERE hash = ? LIMIT 1`, hash).Scan(&bookID, &format)
+	return
+}
+
+// RegisterBookHash associa um hash SHA-256 a um livro e formato.
+func (d *DB) RegisterBookHash(ctx context.Context, hash string, bookID int64, format string, fileSize int64) error {
+	pool := d.appPool
+	if pool == nil {
+		pool = d.rwPool
+	}
+	_, err := pool.ExecContext(ctx, `
+		INSERT INTO cwa_book_hashes (hash, book_id, format, file_size)
+		VALUES (?, ?, ?, ?)
+		ON CONFLICT(hash) DO UPDATE SET book_id = excluded.book_id, format = excluded.format, file_size = excluded.file_size
+	`, hash, bookID, format, fileSize)
+	return err
+}
+
+// QuarantineItem representa um ficheiro colocado em quarentena.
+type QuarantineItem struct {
+	ID           string    `json:"id"`
+	Filename     string    `json:"filename"`
+	FilePath     string    `json:"file_path"`
+	FileHash     string    `json:"file_hash"`
+	FileSize     int64     `json:"file_size"`
+	Reason       string    `json:"reason"`
+	ErrorDetails string    `json:"error_details"`
+	Status       string    `json:"status"`
+	CreatedAt    time.Time `json:"created_at"`
+}
+
+// AddQuarantineItem adiciona um registo de quarentena.
+func (d *DB) AddQuarantineItem(ctx context.Context, item QuarantineItem) error {
+	pool := d.appPool
+	if pool == nil {
+		pool = d.rwPool
+	}
+	_, err := pool.ExecContext(ctx, `
+		INSERT INTO cwa_quarantine (id, filename, file_path, file_hash, file_size, reason, error_details, status)
+		VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+	`, item.ID, item.Filename, item.FilePath, item.FileHash, item.FileSize, item.Reason, item.ErrorDetails, item.Status)
+	return err
+}
+
+// ListQuarantineItems lista eventos de quarentena.
+func (d *DB) ListQuarantineItems(ctx context.Context, statusFilter string) ([]QuarantineItem, error) {
+	pool := d.appPool
+	if pool == nil {
+		pool = d.roPool
+	}
+	query := `SELECT id, filename, file_path, file_hash, file_size, reason, error_details, status, created_at FROM cwa_quarantine`
+	var rows *sql.Rows
+	var err error
+	if statusFilter != "" {
+		query += ` WHERE status = ? ORDER BY created_at DESC LIMIT 100`
+		rows, err = pool.QueryContext(ctx, query, statusFilter)
+	} else {
+		query += ` ORDER BY created_at DESC LIMIT 100`
+		rows, err = pool.QueryContext(ctx, query)
+	}
+	if err != nil {
+		return nil, err
+	}
+	defer rows.Close()
+
+	var items []QuarantineItem
+	for rows.Next() {
+		var it QuarantineItem
+		var hash sql.NullString
+		var errDet sql.NullString
+		if scanErr := rows.Scan(&it.ID, &it.Filename, &it.FilePath, &hash, &it.FileSize, &it.Reason, &errDet, &it.Status, &it.CreatedAt); scanErr == nil {
+			it.FileHash = hash.String
+			it.ErrorDetails = errDet.String
+			items = append(items, it)
+		}
+	}
+	return items, nil
 }
 
 // CheckpointWAL consolida os ficheiros WAL em disco e trunca o log para zero.

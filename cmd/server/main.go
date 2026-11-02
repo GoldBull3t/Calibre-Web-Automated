@@ -453,6 +453,11 @@ func main() {
 	mux.HandleFunc("GET /static/", h.ServeStatic)
 	mux.HandleFunc("GET /robots.txt", h.RobotsTxt)
 
+	// Endpoints de diagnóstico, integridade e prontidão
+	mux.HandleFunc("GET /healthz", h.Healthz)
+	mux.HandleFunc("GET /ready", h.Ready)
+	mux.HandleFunc("GET /api/quarantine", h.APIQuarantine)
+
 	// Endpoint de métricas de saúde
 	mux.HandleFunc("GET /health", func(w http.ResponseWriter, r *http.Request) {
 		var m runtime.MemStats

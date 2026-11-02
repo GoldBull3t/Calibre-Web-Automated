@@ -16,6 +16,7 @@ import (
 	"time"
 
 	"github.com/crocodilestick/calibre-web-go/internal/database"
+	"github.com/crocodilestick/calibre-web-go/internal/cleaner"
 	"github.com/crocodilestick/calibre-web-go/internal/formats"
 	"github.com/crocodilestick/calibre-web-go/internal/metadata"
 	"github.com/fsnotify/fsnotify"
@@ -64,12 +65,14 @@ var supportedExtensions = map[string]bool{
 }
 
 type Watcher struct {
-	ingestDir  string
-	libraryDir string
-	db         *database.DB
-	timers     map[string]*time.Timer
-	mu         sync.Mutex
-	jobs       chan string
+	ingestDir      string
+	libraryDir     string
+	quarantineDir  string
+	db             *database.DB
+	timers         map[string]*time.Timer
+	mu             sync.Mutex
+	jobs           chan string
+	converterPool  *formats.ConverterPool
 }
 
 func New(ingestDir, libraryDir string, db *database.DB) *Watcher {
@@ -180,22 +183,85 @@ func (w *Watcher) processFile(srcPath string) error {
 		return err
 	}
 
-	meta, err := formats.Extract(srcPath)
-	if err != nil {
-		return fmt.Errorf("metadados corrompidos ou ilegíveis: %w", err)
+	ext := strings.ToLower(filepath.Ext(srcPath))
+
+	// 1. Unpacker Transiente (.zip e .rar): extrai e-books, descarta lixo promocional e agenda ingestão
+	if ext == ".zip" || ext == ".rar" {
+		extracted, unpackErr := cleaner.UnpackTransientArchive(srcPath, w.ingestDir)
+		if unpackErr != nil {
+			log.Printf("[UNPACK ERROR] Falha ao descompactar %s: %v", srcPath, unpackErr)
+			_ = cleaner.QuarantineFile(context.Background(), srcPath, w.quarantineDir, "Falha na descompressão de arquivo", unpackErr, w.db)
+			return nil
+		}
+		_ = os.Remove(srcPath)
+		log.Printf("[UNPACK SUCCESS] %d e-book(s) extraídos de %s", len(extracted), filepath.Base(srcPath))
+		for _, ebookFile := range extracted {
+			w.debounce(ebookFile)
+		}
+		return nil
 	}
 
-	title := meta.Title
-	if title == "" {
-		title = strings.TrimSuffix(filepath.Base(srcPath), filepath.Ext(srcPath))
+	// 2. Content Deduplication via SHA-256
+	fileHash, _, hashErr := cleaner.CalculateSHA256(srcPath)
+	if hashErr == nil && fileHash != "" {
+		if existingID, existingFmt, err := w.db.GetBookByHash(context.Background(), fileHash); err == nil && existingID > 0 {
+			fmtClean := strings.ToUpper(strings.TrimPrefix(ext, "."))
+			if strings.EqualFold(existingFmt, fmtClean) {
+				log.Printf("[DEDUPLICATION] Ficheiro redundante descartado (SHA-256: %s): %s", fileHash[:12], filepath.Base(srcPath))
+				_ = os.Remove(srcPath)
+				return nil
+			}
+		}
 	}
+
+	// 3. Extração de Metadados com Mecanismo de Quarentena
+	meta, err := formats.Extract(srcPath)
+	if err != nil {
+		log.Printf("[QUARANTINE] Metadados corrompidos ou ilegíveis em %s: %v. A mover para quarentena.", filepath.Base(srcPath), err)
+		_ = cleaner.QuarantineFile(context.Background(), srcPath, w.quarantineDir, "Metadados corrompidos ou ilegíveis", err, w.db)
+		return nil
+	}
+
+	// 4. Normalização Regex e Parser de Séries
+	rawBase := strings.TrimSuffix(filepath.Base(srcPath), filepath.Ext(srcPath))
+	cleanTitleStr, cleanAuthorStr := cleaner.CleanTitleAndAuthor(rawBase)
+
+	title := meta.Title
+	if title == "" || strings.EqualFold(title, "Unknown") {
+		title = cleanTitleStr
+	} else {
+		title = cleaner.CleanString(title)
+	}
+
 	author := "Unknown"
 	if len(meta.Authors) > 0 && strings.TrimSpace(meta.Authors[0]) != "" {
-		author = meta.Authors[0]
+		author = cleaner.CleanString(meta.Authors[0])
+	} else if cleanAuthorStr != "" {
+		author = cleanAuthorStr
+	}
+
+	cleanTitle, seriesName, seriesIndex, hasSeries := cleaner.ParseSeries(rawBase)
+	if !hasSeries && meta.Series != "" {
+		seriesName = cleaner.CleanString(meta.Series)
+		seriesIndex = meta.SeriesIndex
+		hasSeries = true
+	}
+	if hasSeries && cleanTitle != "" {
+		title = cleanTitle
+	}
+	if seriesIndex <= 0 {
+		seriesIndex = 1.0
 	}
 
 	cleanAuthor := sanitizeName(author)
-	cleanTitle := sanitizeName(title)
+	cleanTitleClean := sanitizeName(title)
+
+	// Otimização prévia de imagem de capa em memória (máx 1600px de altura)
+	if len(meta.CoverBytes) > 0 {
+		if optBytes, errO := formats.OptimizeCoverBytes(meta.CoverBytes, 1600); errO == nil && len(optBytes) > 0 {
+			meta.CoverBytes = optBytes
+		}
+	}
 
 	return w.db.ExecuteWrite(func(tx *sql.Tx) error {
 		// 1. Obter ou Criar Autor
@@ -225,7 +291,7 @@ func (w *Watcher) processFile(srcPath string) error {
 			_ = tx.QueryRow("SELECT COUNT(*) FROM data WHERE book = ? AND format = ?", existingBookID, meta.Format).Scan(&fmtCount)
 			if fmtCount == 0 {
 				bookDir := filepath.Join(w.libraryDir, filepath.FromSlash(existingPath))
-				finalFileName := fmt.Sprintf("%s - %s.%s", cleanTitle, cleanAuthor, strings.ToLower(meta.Format))
+				finalFileName := fmt.Sprintf("%s - %s.%s", cleanTitleClean, cleanAuthor, strings.ToLower(meta.Format))
 				finalPath := filepath.Join(bookDir, finalFileName)
 
 				if err := moveOrCopy(srcPath, finalPath); err != nil {
@@ -245,6 +311,9 @@ func (w *Watcher) processFile(srcPath string) error {
 					INSERT INTO data (book, format, uncompressed_size, name)
 					VALUES (?, ?, ?, ?)
 				`, existingBookID, meta.Format, fi.Size(), strings.TrimSuffix(finalFileName, "."+strings.ToLower(meta.Format)))
+				if fileHash != "" {
+					_ = w.db.RegisterBookHash(context.Background(), fileHash, existingBookID, meta.Format, fi.Size())
+				}
 				return err
 			}
 			// Se o formato já existia, descarta o arquivo de ingestão duplicado
@@ -252,14 +321,14 @@ func (w *Watcher) processFile(srcPath string) error {
 			return nil
 		}
 
-		// 3. Novo Livro
+		// 3. Inserção de Novo Livro
 		bookUUID := uuid.New().String()
 		now := time.Now().UTC()
 
 		res, err := tx.Exec(`
 			INSERT INTO books (title, sort, timestamp, pubdate, series_index, last_modified, path, has_cover, uuid)
-			VALUES (?, ?, ?, ?, 1.0, ?, '', 0, ?)
-		`, title, title, now, now, now, bookUUID)
+			VALUES (?, ?, ?, ?, ?, ?, '', 0, ?)
+		`, title, title, now, now, seriesIndex, now, bookUUID)
 		if err != nil {
 			return fmt.Errorf("erro ao inserir livro: %w", err)
 		}
@@ -270,21 +339,36 @@ func (w *Watcher) processFile(srcPath string) error {
 			return fmt.Errorf("erro ao vincular autor: %w", err)
 		}
 
-		// 5. Estrutura de Diretórios Calibre: Autor/Título (ID)
-		relPath := filepath.Join(cleanAuthor, fmt.Sprintf("%s (%d)", cleanTitle, bookID))
+		// 5. Vincular Série e Número de Índice se identificados
+		if hasSeries && seriesName != "" {
+			var seriesID int64
+			sErr := tx.QueryRow("SELECT id FROM series WHERE name = ?", seriesName).Scan(&seriesID)
+			if sErr == sql.ErrNoRows {
+				resS, errS := tx.Exec("INSERT INTO series (name, sort) VALUES (?, ?)", seriesName, seriesName)
+				if errS == nil {
+					seriesID, _ = resS.LastInsertId()
+				}
+			}
+			if seriesID > 0 {
+				_, _ = tx.Exec("INSERT OR IGNORE INTO books_series_link (book, series) VALUES (?, ?)", bookID, seriesID)
+			}
+		}
+
+		// 6. Estrutura de Diretórios Calibre: Autor/Título (ID)
+		relPath := filepath.Join(cleanAuthor, fmt.Sprintf("%s (%d)", cleanTitleClean, bookID))
 		absBookDir := filepath.Join(w.libraryDir, relPath)
 		if err := os.MkdirAll(absBookDir, 0755); err != nil {
 			return fmt.Errorf("erro ao criar pasta do livro: %w", err)
 		}
 
-		finalFileName := fmt.Sprintf("%s - %s.%s", cleanTitle, cleanAuthor, strings.ToLower(meta.Format))
+		finalFileName := fmt.Sprintf("%s - %s.%s", cleanTitleClean, cleanAuthor, strings.ToLower(meta.Format))
 		finalFilePath := filepath.Join(absBookDir, finalFileName)
 
 		if err := moveOrCopy(srcPath, finalFilePath); err != nil {
 			return fmt.Errorf("erro ao mover ficheiro do livro: %w", err)
 		}
 
-		// 6. Extração e Gravação de Capa
+		// 7. Extração e Gravação de Capa
 		hasCover := 0
 		if len(meta.CoverBytes) > 0 {
 			coverDest := filepath.Join(absBookDir, "cover.jpg")
@@ -293,7 +377,7 @@ func (w *Watcher) processFile(srcPath string) error {
 			}
 		}
 
-		// 7. Inserir Formato em 'data'
+		// 8. Inserir Formato em 'data'
 		uncompressedSize := fi.Size()
 		if _, err := tx.Exec(`
 			INSERT INTO data (book, format, uncompressed_size, name)
@@ -302,28 +386,53 @@ func (w *Watcher) processFile(srcPath string) error {
 			return fmt.Errorf("erro ao registrar formato: %w", err)
 		}
 
-		// 8. Inserir Sinopse em 'comments'
+		// Registo de Hash SHA-256 para desduplicação
+		if fileHash != "" {
+			_ = w.db.RegisterBookHash(context.Background(), fileHash, bookID, meta.Format, uncompressedSize)
+		}
+
+		// 9. Inserir Sinopse em 'comments'
 		if meta.Description != "" {
 			_, _ = tx.Exec("INSERT INTO comments (book, text) VALUES (?, ?)", bookID, meta.Description)
 		}
 
-		// 9. Inserir Identificadores
+		// 10. Inserir Identificadores
 		for k, v := range meta.Identifiers {
 			_, _ = tx.Exec("INSERT INTO identifiers (book, type, val) VALUES (?, ?, ?)", bookID, k, v)
 		}
 
-		// 10. Atualizar caminho e flag de capa
+		// 11. Atualizar caminho e flag de capa
 		_, err = tx.Exec("UPDATE books SET path = ?, has_cover = ? WHERE id = ?", filepath.ToSlash(relPath), hasCover, bookID)
 		if err != nil {
 			return err
 		}
 
-		// 11. CWA Automatic EPUB Fixer Service
+		// 12. Sanitização Cirúrgica de CSS/HTML e Geração de Kepub
 		if strings.EqualFold(meta.Format, "EPUB") {
-			_, _ = formats.FixEPUB(finalFilePath)
+			_, _ = formats.SanitizeEPUB(finalFilePath, finalFilePath)
+
+if w.converterPool != nil {
+				w.converterPool.Submit(func(ctx context.Context) error {
+					kepubPath, errK := formats.GenerateKepub(finalFilePath, absBookDir)
+					if errK == nil && kepubPath != "" {
+						fiK, errStat := os.Stat(kepubPath)
+						if errStat == nil {
+							_ = w.db.ExecuteWrite(func(txK *sql.Tx) error {
+								_, errIns := txK.Exec(`
+									INSERT INTO data (book, format, uncompressed_size, name)
+									VALUES (?, 'KEPUB', ?, ?)
+									ON CONFLICT(book, format) DO NOTHING
+								`, bookID, fiK.Size(), strings.TrimSuffix(filepath.Base(kepubPath), ".kepub.epub"))
+								return errIns
+							})
+						}
+					}
+					return nil
+				})
+			}
 		}
 
-		// 12. CWA Automatic Metadata Fetch on Ingest (se capa ou sinopse estiverem ausentes)
+		// 13. Metadados e capa automáticos online se ausentes
 		if hasCover == 0 || meta.Description == "" {
 			go func(bID int64, bTitle, bAuthor, targetDir string, needCover, needDesc bool) {
 				results := metadata.SearchOnline(context.Background(), bTitle+" "+bAuthor)
@@ -340,6 +449,9 @@ func (w *Watcher) processFile(srcPath string) error {
 							cBytes, _ := io.ReadAll(io.LimitReader(resp.Body, 10*1024*1024))
 							resp.Body.Close()
 							if len(cBytes) > 0 {
+								if optC, errO := formats.OptimizeCoverBytes(cBytes, 1600); errO == nil {
+									cBytes = optC
+								}
 								cPath := filepath.Join(targetDir, "cover.jpg")
 								if os.WriteFile(cPath, cBytes, 0644) == nil {
 									_, _ = txW.Exec("UPDATE books SET has_cover = 1 WHERE id = ?", bID)

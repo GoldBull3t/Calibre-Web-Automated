@@ -21,6 +21,8 @@ type ExtractedBook struct {
 	Description string
 	Publisher   string
 	Language    string
+	Series      string
+	SeriesIndex float64
 	Identifiers map[string]string
 	CoverBytes  []byte
 	Format      string

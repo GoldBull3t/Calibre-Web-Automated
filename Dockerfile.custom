@@ -20,7 +20,7 @@ RUN CGO_ENABLED=0 GOOS=linux go build -ldflags="-s -w" -o /calibre-web-go ./cmd/
 # Stage 3: Runtime minimalista
 FROM alpine:3.20
 
-RUN apk --no-cache add ca-certificates tzdata wget p7zip \
+RUN apk --no-cache add ca-certificates tzdata wget p7zip su-exec \
     && wget -q -O /usr/local/bin/kepubify https://github.com/pgaskin/kepubify/releases/latest/download/kepubify-linux-64bit \
     && chmod +x /usr/local/bin/kepubify \
     && apk del wget
@@ -30,15 +30,18 @@ WORKDIR /app
 COPY --from=builder /calibre-web-go /app/calibre-web-go
 COPY cps/static /app/cps/static
 COPY empty_library /app/empty_library
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
 
 ENV PORT=8083 \
     LIBRARY_PATH=/library \
     INGEST_PATH=/ingest \
+    QUARANTINE_PATH=/cwa-quarantine \
     STATIC_PATH=/app/cps/static \
     GOMEMLIMIT=35MiB \
     GOGC=60
 
-VOLUME ["/library", "/ingest"]
+VOLUME ["/library", "/ingest", "/cwa-quarantine"]
 EXPOSE 8083
 
-ENTRYPOINT ["/app/calibre-web-go"]
+ENTRYPOINT ["/entrypoint.sh"]
